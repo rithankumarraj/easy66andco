@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_whatsapp">WhatsApp Messaging</span>{% endblock %}
+
+{% block content %}
+<style>
+  /* WhatsApp Interactive Card Styling (matching WhatsApp Mobile App UI) */
+  .wa-chat-container {
+    background: #efeae2;
+    background-image: radial-gradient(#d1d7db 1px, transparent 1px);
+    background-size: 20px 20px;
+    border-radius: 18px;
+    border: 1px solid #d1d7db;
+    padding: 18px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.03);
+  }
+  .wa-chat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #d1d7db;
+    padding-bottom: 10px;
+  }
+  .wa-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #075e54;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .wa-bubble-card {
+    background: #ffffff;
+    border-radius: 10px 10px 10px 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    overflow: hidden;
+    max-width: 100%;
+    border: 1px solid #e2e8f0;
+  }
+  .wa-bubble-header {
+    font-weight: 800;
+    font-size: 14.5px;
+    color: #111b21;
+    padding: 12px 14px 6px;
+    line-height: 1.4;
+  }
+  .wa-bubble-body {
+    padding: 4px 14px 10px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #334155;
+    white-space: pre-wrap;
+  }
+  .wa-bubble-footer {
+    padding: 0 14px 10px;
+    font-size: 11px;
+    color: #64748b;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .wa-cta-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 14px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    color: #059669;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .wa-cta-button:hover {
+    background: #ecfdf5;
+  }
+</style>
+
+<div class="card">
+  <div class="card-header-row" style="flex-wrap:wrap;gap:12px;">
+    <div>
+      <h3 class="card-title">Automated WhatsApp Messaging & Interactive CTA Links</h3>
+      <div class="card-subtitle">Dispatch automated Loan Application links and Cashfree AutoPay authorization cards.</div>
+    </div>
+    
+    <div style="display:flex;gap:8px;">
+      {% if request.user.profile.role == 'admin' %}
+        <a href="{% url 'whatsapp_settings' %}" class="btn btn-outline btn-sm">
+          <span class="material-symbols-outlined">settings</span> Meta Sandbox Settings
+        </a>
+      {% endif %}
+      <a href="{% url 'loan_request_list' %}" class="btn btn-primary btn-sm">
+        <span class="material-symbols-outlined">assignment</span> Loan Applications
+      </a>
+    </div>
+  </div>
+
+  <!-- Mode Switcher Tabs -->
+  <div style="display:flex;gap:8px;margin-top:14px;border-bottom:1px solid var(--border);padding-bottom:12px;flex-wrap:wrap;">
+    <a href="{% url 'whatsapp_messenger' %}?mode=loan" class="btn btn-sm {% if mode != 'autopay' %}btn-primary{% else %}btn-outline{% endif %}">
+      <span class="material-symbols-outlined" style="font-size:16px;">description</span>
+      1. Loan Application & KYC Link
+    </a>
+    <a href="{% url 'whatsapp_messenger' %}?mode=autopay" class="btn btn-sm {% if mode == 'autopay' %}btn-primary{% else %}btn-outline{% endif %}">
+      <span class="material-symbols-outlined" style="font-size:16px;">bolt</span>
+      2. Accept AutoPay Mandate Link
+    </a>
+  </div>
+
+  <!-- Quick Loan Picker (when in AutoPay mode) -->
+  {% if mode == 'autopay' and active_loans %}
+    <div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:12.5px;font-weight:700;color:#334155;">Quick Select Borrower Loan:</span>
+      <select class="form-control" style="max-width:340px;height:34px;font-size:12.5px;" onchange="if(this.value) window.location.href='{% url 'whatsapp_messenger' %}?mode=autopay&loan_id=' + this.value;">
+        <option value="">— Choose Active Loan —</option>
+        {% for l in active_loans %}
+          <option value="{{ l.pk }}" {% if loan_obj and loan_obj.pk == l.pk %}selected{% endif %}>
+            {{ l.loan_id }} — {{ l.customer.name }} ({{ l.customer.phone }}) · {{ l.gross_principal|inr }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  {% endif %}
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:20px;">
+  <!-- Left Column: Compose & Send -->
+  <div class="card">
+    <h3 class="card-title" style="margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+      <span class="material-symbols-outlined" style="color:var(--teal)">outgoing_mail</span>
+      {% if mode == 'autopay' %}Automated AutoPay Mandate Message{% else %}Loan Application Message{% endif %}
+    </h3>
+
+    <form method="POST">
+      {% csrf_token %}
+      
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-weight:600;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+          Recipient WhatsApp Number <span style="color:red;">*</span>
+        </label>
+        <input type="tel" name="phone" id="target_phone" class="form-control" required placeholder="e.g. 9871000001 or 919871000001" value="{{ phone }}">
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-weight:600;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+          Card Header Title (Bold)
+        </label>
+        <input type="text" name="header" id="header_input" class="form-control" value="{{ header_text }}" oninput="updateLiveCard()">
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-weight:600;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+          Message Body Text
+        </label>
+        <textarea name="message" id="message_content" class="form-control" rows="8" style="font-size:13px;line-height:1.5;" oninput="updateLiveCard()">{{ message_text }}</textarea>
+      </div>
+
+      <div class="form-grid" style="margin-bottom:18px;">
+        <div class="form-group">
+          <label style="font-weight:600;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+            Action Button Label
+          </label>
+          <input type="text" name="button_text" id="btn_text_input" class="form-control" value="{{ button_text }}" oninput="updateLiveCard()">
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight:600;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+            Action Button URL Link
+          </label>
+          <input type="url" name="button_url" id="btn_url_input" class="form-control" value="{{ button_url }}" oninput="updateLiveCard()">
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- Option 1: Send as Meta Interactive CTA Card -->
+        <button type="submit" name="action" value="send_meta_cta" class="btn btn-primary" style="height:44px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span class="material-symbols-outlined">smart_button</span>
+          Send Interactive CTA Card via Meta Sandbox
+        </button>
+
+        <!-- Option 2: Send Direct Text Message via Meta Cloud API (Official cURL payload) -->
+        <button type="submit" name="action" value="send_meta" class="btn btn-outline" style="height:44px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;border-color:var(--primary);color:var(--primary);">
+          <span class="material-symbols-outlined">send</span>
+          Send Text Message via Meta Cloud API (Official API)
+        </button>
+
+        <!-- Option 3: 1-Click WhatsApp Direct (wa.me) -->
+        <a id="btn_direct_wa" href="{{ direct_wa_url|default:'#' }}" target="_blank" class="btn btn-teal" style="height:44px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
+          <span class="material-symbols-outlined">open_in_new</span>
+          Open Direct WhatsApp with Link (wa.me)
+        </a>
+
+        <!-- Collapsible cURL Command Snippet for Testing -->
+        <details style="margin-top:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;">
+          <summary style="font-size:12.5px;font-weight:700;color:var(--text-dark);cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <span class="material-symbols-outlined" style="font-size:16px;">terminal</span>
+            View Meta cURL Command for Terminal
+          </summary>
+          <div style="margin-top:8px;">
+            <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:6px;">
+              Direct cURL request matching Meta's documentation (runs in PowerShell or Bash):
+            </div>
+            <pre id="curl_code_block" style="background:#0f172a;color:#38bdf8;padding:10px;border-radius:6px;font-size:11.5px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">{{ curl_snippet }}</pre>
+            <button type="button" class="btn btn-outline btn-sm" onclick="copyCurlCommand()" style="margin-top:4px;">
+              <span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy cURL Command
+            </button>
+          </div>
+        </details>
+      </div>
+    </form>
+  </div>
+
+  <!-- Right Column: Live Mobile Interactive CTA Preview -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+    <!-- Live WhatsApp Chat Bubble Preview with CTA Button -->
+    <div class="wa-chat-container">
+      <div class="wa-chat-header">
+        <div class="wa-avatar">66</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:#111b21;">Easy 66 & Co · Verified Business</div>
+          <div style="font-size:11.5px;color:#667781;">WhatsApp Business Cloud</div>
+        </div>
+      </div>
+
+      <!-- WhatsApp Interactive Card (Exact replica of user's screenshot) -->
+      <div class="wa-bubble-card">
+        <div class="wa-bubble-header" id="preview_header">{{ header_text }}</div>
+        <div class="wa-bubble-body" id="preview_body">{{ message_text }}</div>
+        <div class="wa-bubble-footer">
+          <span>Easy 66 & Co · Thavanai Finance</span>
+          <span style="font-size:10px;">Just now</span>
+        </div>
+        
+        <!-- Interactive CTA URL Button -->
+        <a id="preview_cta_anchor" href="{{ button_url }}" target="_blank" class="wa-cta-button">
+          <span class="material-symbols-outlined" style="font-size:17px;">open_in_new</span>
+          <span id="preview_button_label">{{ button_text }}</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- API Response Log (If Dispatched) -->
+    {% if api_result %}
+      <div class="card" style="border-left:4px solid {% if api_result.success %}#10b981{% else %}#ef4444{% endif %};">
+        <h4 style="margin:0 0 8px 0;display:flex;align-items:center;gap:6px;color:{% if api_result.success %}#059669{% else %}#dc2626{% endif %};">
+          <span class="material-symbols-outlined">{% if api_result.success %}check_circle{% else %}error{% endif %}</span>
+          Meta Graph API Response
+        </h4>
+        <pre style="background:#f8fafc;padding:12px;border-radius:8px;font-size:12px;overflow-x:auto;max-height:220px;border:1px solid #e2e8f0;margin:0;">{{ api_result|pprint }}</pre>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  function updateLiveCard() {
+    const header = document.getElementById('header_input').value;
+    const body = document.getElementById('message_content').value;
+    const btnText = document.getElementById('btn_text_input').value;
+    const btnUrl = document.getElementById('btn_url_input').value;
+
+    document.getElementById('preview_header').innerText = header;
+    document.getElementById('preview_body').innerText = body;
+    document.getElementById('preview_button_label').innerText = btnText;
+    document.getElementById('preview_cta_anchor').href = btnUrl || '#';
+
+    updateDirectWaLink();
+  }
+
+  function updateDirectWaLink() {
+    let phone = document.getElementById('target_phone').value.trim();
+    phone = phone.replace(/[^0-9]/g, '');
+    if (phone.length === 10) {
+      phone = '91' + phone;
+    }
+    const header = document.getElementById('header_input').value;
+    const body = document.getElementById('message_content').value;
+    const btnText = document.getElementById('btn_text_input').value;
+    const btnUrl = document.getElementById('btn_url_input').value;
+
+    let fullMsg = '*' + header + '*\n\n' + body;
+    if (btnUrl && !body.includes(btnUrl)) {
+      fullMsg += '\n\n*' + btnText + ':* ' + btnUrl;
+    }
+    const enc = encodeURIComponent(fullMsg);
+
+    const btn = document.getElementById('btn_direct_wa');
+    if (phone) {
+      btn.href = 'https://wa.me/' + phone + '?text=' + enc;
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+    } else {
+      btn.href = '#';
+      btn.style.opacity = '0.5';
+    }
+  }
+
+  function copyCurlCommand() {
+    const text = document.getElementById('curl_code_block').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('cURL command copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+    });
+  }
+
+  document.getElementById('target_phone').addEventListener('input', updateDirectWaLink);
+  updateDirectWaLink();
+</script>
+{% endblock %}

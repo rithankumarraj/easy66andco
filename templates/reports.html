@@ -1,0 +1,432 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_reports">Reports</span>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header-row" style="flex-wrap:wrap;gap:12px;">
+    <div>
+      <h3 class="card-title" data-i18n="nav_reports">Financial Reports</h3>
+      <div class="card-subtitle">Generate live collection summaries, ledger sheets, and export as PDF.</div>
+    </div>
+    
+    <!-- Quick Preset Buttons -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <a href="{% url 'reports' %}?type=collection&from={{ today_str }}&to={{ today_str }}" 
+         class="btn btn-sm {% if report_type == 'collection' and from_date == today_str and to_date == today_str %}btn-primary{% else %}btn-outline{% endif %}">
+        <span class="material-symbols-outlined" style="font-size:16px;">today</span> Today's Report
+      </a>
+      <a href="{% url 'reports' %}?type=summary" 
+         class="btn btn-sm {% if report_type == 'summary' %}btn-primary{% else %}btn-outline{% endif %}">
+        <span class="material-symbols-outlined" style="font-size:16px;">dashboard</span> Overall Summary
+      </a>
+      <a href="{% url 'reports' %}?type=outstanding" 
+         class="btn btn-sm {% if report_type == 'outstanding' %}btn-primary{% else %}btn-outline{% endif %}">
+        <span class="material-symbols-outlined" style="font-size:16px;">account_balance</span> Outstanding
+      </a>
+      <a href="{% url 'reports' %}?type=overdue" 
+         class="btn btn-sm {% if report_type == 'overdue' %}btn-primary{% else %}btn-outline{% endif %}">
+        <span class="material-symbols-outlined" style="font-size:16px;">warning</span> Overdue
+      </a>
+    </div>
+  </div>
+
+  <form method="GET" class="filter-bar" style="margin-top:12px;">
+    <div class="form-group" style="min-width:200px;">
+      <label data-i18n="lbl_report_type">Report Type</label>
+      <select name="type" class="form-control" required>
+        <option value="collection" {% if report_type == 'collection' %}selected{% endif %}>Collection Report (வசூல் அறிக்கை)</option>
+        <option value="summary" {% if report_type == 'summary' %}selected{% endif %}>Overall Summary Report (ஒட்டுமொத்த சுருக்கம்)</option>
+        <option value="outstanding" {% if report_type == 'outstanding' %}selected{% endif %}>Outstanding Balance Report (நிலுவை அறிக்கை)</option>
+        <option value="overdue" {% if report_type == 'overdue' %}selected{% endif %}>Overdue Installments Report (காலாவதியான தவணைகள்)</option>
+        <option value="customer" {% if report_type == 'customer' %}selected{% endif %}>Customer-wise Ledger (வாடிக்கையாளர் பேரேடு)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="lbl_from_date">From Date</label>
+      <input type="date" name="from" value="{{ from_date }}" class="form-control">
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="lbl_to_date">To Date</label>
+      <input type="date" name="to" value="{{ to_date }}" class="form-control">
+    </div>
+
+    <button type="submit" class="btn btn-teal btn-sm" style="height:36px;">
+      <span class="material-symbols-outlined">insights</span> View Report
+    </button>
+  </form>
+</div>
+
+{% if report_type %}
+  <div class="card">
+    <div class="card-header-row" style="flex-wrap:wrap;gap:12px;">
+      <div>
+        <h3 class="card-title">{{ report_title }}</h3>
+        <div class="card-subtitle">
+          {% if from_date == to_date and from_date == today_str %}
+            Live transactions recorded for today ({{ from_date }})
+          {% elif from_date or to_date %}
+            Period: {{ from_date|default:"Beginning" }} to {{ to_date|default:"Present" }}
+          {% else %}
+            All active accounts
+          {% endif %}
+        </div>
+      </div>
+      <a href="{% url 'report_pdf' %}?type={{ report_type }}&from={{ from_date }}&to={{ to_date }}" class="btn btn-primary btn-sm btn-corner">
+        <span class="material-symbols-outlined">picture_as_pdf</span>
+        <span data-i18n="btn_download_pdf">Download PDF</span>
+      </a>
+    </div>
+
+    <!-- Summary KPI Box -->
+    {% if summary %}
+      <div class="stats-grid" style="margin-bottom:16px;">
+        {% if summary.today_collected is not None and report_type == 'collection' %}
+          <div class="stat-box">
+            <span class="stat-lbl">Today's Collection</span>
+            <div class="stat-val" style="color:var(--teal)">{{ summary.today_collected|inr }}</div>
+            <span style="font-size:11px;color:var(--text-muted);">{{ summary.today_count }} collected today</span>
+          </div>
+        {% endif %}
+        {% if summary.total_collected is not None and report_type == 'collection' %}
+          <div class="stat-box">
+            <span class="stat-lbl">Filtered Period Total</span>
+            <div class="stat-val" style="color:var(--teal)">{{ summary.total_collected|inr }}</div>
+            <span style="font-size:11px;color:var(--text-muted);">{{ summary.count }} transactions</span>
+          </div>
+        {% endif %}
+        {% if summary.total_loans %}
+          <div class="stat-box">
+            <span class="stat-lbl" data-i18n="lbl_total_loans">Total Loans</span>
+            <div class="stat-val">{{ summary.total_loans }}</div>
+          </div>
+        {% endif %}
+        {% if summary.total_gross %}
+          <div class="stat-box">
+            <span class="stat-lbl" data-i18n="lbl_total_gross">Total Gross</span>
+            <div class="stat-val">{{ summary.total_gross|inr }}</div>
+          </div>
+        {% endif %}
+        {% if summary.total_disbursed %}
+          <div class="stat-box">
+            <span class="stat-lbl" data-i18n="lbl_total_disbursed">Cash Disbursed</span>
+            <div class="stat-val" style="color:var(--teal)">{{ summary.total_disbursed|inr }}</div>
+          </div>
+        {% endif %}
+        {% if summary.collected %}
+          <div class="stat-box">
+            <span class="stat-lbl" data-i18n="lbl_total_collected">Total Collected</span>
+            <div class="stat-val" style="color:var(--teal)">{{ summary.collected|inr }}</div>
+          </div>
+        {% endif %}
+        {% if summary.total_outstanding %}
+          <div class="stat-box">
+            <span class="stat-lbl" data-i18n="th_outstanding">Total Outstanding</span>
+            <div class="stat-val" style="color:var(--danger)">{{ summary.total_outstanding|inr }}</div>
+            <span style="font-size:11px;color:var(--text-muted);">{{ summary.count }} active loans</span>
+          </div>
+        {% endif %}
+        {% if summary.total_overdue %}
+          <div class="stat-box">
+            <span class="stat-lbl" data-i18n="lbl_overdue">Total Overdue</span>
+            <div class="stat-val" style="color:var(--danger)">{{ summary.total_overdue|inr }}</div>
+            <span style="font-size:11px;color:var(--text-muted);">{{ summary.count }} missed installments</span>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Report Table Data -->
+    <!-- 1. Desktop Table View -->
+    <div class="desktop-table-view">
+      <div class="table-responsive">
+        {% if report_type == 'summary' or report_type == 'customer' %}
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_id">Loan ID</th>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_phone">Phone</th>
+                <th data-i18n="th_gross">Gross</th>
+                <th data-i18n="th_net_cash">Cash Disbursed</th>
+                <th data-i18n="th_frequency">Freq</th>
+                <th data-i18n="th_per_inst">Per Inst</th>
+                <th data-i18n="th_paid">Total Paid</th>
+                <th data-i18n="th_balance">Outstanding</th>
+                <th data-i18n="th_status">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for loan in report_data %}
+                <tr>
+                  <td><a href="{% url 'loan_detail' loan.pk %}" style="font-weight:600;color:var(--primary);">{{ loan.loan_id }}</a></td>
+                  <td><strong>{{ loan.customer.name }}</strong></td>
+                  <td>{{ loan.customer.phone }}</td>
+                  <td>{{ loan.gross_principal|inr }}</td>
+                  <td style="color:var(--teal);font-weight:700;">{{ loan.net_proceeds|inr }}</td>
+                  <td>{{ loan.frequency|title }}</td>
+                  <td>{{ loan.installment_amount|inr }}</td>
+                  <td style="color:var(--teal);font-weight:700;">{{ loan.paid_total|inr }}</td>
+                  <td style="color:var(--danger);font-weight:700;">{{ loan.outstanding|inr }}</td>
+                  <td><span class="badge badge-{{ loan.status }}">{{ loan.status|title }}</span></td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="10" style="text-align:center;padding:24px;color:var(--text-muted);">
+                    No loans recorded yet.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        {% elif report_type == 'collection' %}
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_paid_date">Paid Date</th>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_phone">Phone</th>
+                <th>Loan ID</th>
+                <th>Inst #</th>
+                <th data-i18n="th_amount">Paid Amount</th>
+                <th>Payment Mode</th>
+                <th>Staff / Collector</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inst in report_data %}
+                <tr>
+                  <td><strong>{{ inst.paid_date|date:"d M Y" }}</strong></td>
+                  <td>
+                    <a href="{% url 'customer_detail' inst.loan.customer.pk %}" style="font-weight:600;color:var(--primary);">
+                      {{ inst.loan.customer.name }}
+                    </a>
+                  </td>
+                  <td>{{ inst.loan.customer.phone }}</td>
+                  <td><a href="{% url 'loan_detail' inst.loan.pk %}">{{ inst.loan.loan_id }}</a></td>
+                  <td><span class="badge badge-info">#{{ inst.num }}</span></td>
+                  <td style="color:var(--teal);font-weight:700;font-size:15px;">{{ inst.paid_amount|inr }}</td>
+                  <td>
+                    {% if inst.payment_method == 'cashfree_auto' %}
+                      <span class="badge badge-active">AutoPay</span>
+                    {% else %}
+                      <span class="badge badge-completed">Cash</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ inst.collected_by.get_full_name|default:inst.collected_by|default:"—" }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">
+                    <div style="font-size:36px;margin-bottom:8px;">📅</div>
+                    <h4 style="margin:0 0 4px 0;">No collections recorded for this date.</h4>
+                    <p style="margin:0 0 16px 0;font-size:13px;">Use the daily collection sheet to collect installments due today.</p>
+                    <a href="{% url 'collection_list' %}" class="btn btn-teal btn-sm">
+                      <span class="material-symbols-outlined">payments</span> Open Collection Sheet
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        {% elif report_type == 'outstanding' %}
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_id">Loan ID</th>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_phone">Phone</th>
+                <th data-i18n="th_gross">Gross</th>
+                <th data-i18n="th_net_cash">Cash Disbursed</th>
+                <th data-i18n="th_paid">Paid Amount</th>
+                <th data-i18n="th_balance">Outstanding</th>
+                <th>Pending Inst.</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for loan in report_data %}
+                <tr>
+                  <td><a href="{% url 'loan_detail' loan.pk %}" style="font-weight:600;">{{ loan.loan_id }}</a></td>
+                  <td><strong>{{ loan.customer.name }}</strong></td>
+                  <td>{{ loan.customer.phone }}</td>
+                  <td>{{ loan.gross_principal|inr }}</td>
+                  <td>{{ loan.net_proceeds|inr }}</td>
+                  <td style="color:var(--teal);font-weight:600;">{{ loan.paid_total|inr }}</td>
+                  <td style="color:var(--danger);font-weight:700;">{{ loan.outstanding|inr }}</td>
+                  <td><span class="badge badge-warning">{{ loan.pending_count }}</span></td>
+                  <td>
+                    <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-sm btn-outline">View</a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted);">
+                    No outstanding loans found.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        {% elif report_type == 'overdue' %}
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_phone">Phone</th>
+                <th>Loan ID</th>
+                <th data-i18n="th_due_date">Due Date</th>
+                <th>#</th>
+                <th data-i18n="th_amount">Overdue Amount</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inst in report_data %}
+                <tr>
+                  <td>
+                    <a href="{% url 'customer_detail' inst.loan.customer.pk %}" style="font-weight:600;color:var(--primary);">
+                      {{ inst.loan.customer.name }}
+                    </a>
+                  </td>
+                  <td>{{ inst.loan.customer.phone }}</td>
+                  <td><a href="{% url 'loan_detail' inst.loan.pk %}">{{ inst.loan.loan_id }}</a></td>
+                  <td style="color:var(--danger);font-weight:600;">{{ inst.due_date|date:"d M Y" }}</td>
+                  <td><span class="badge badge-danger">#{{ inst.num }}</span></td>
+                  <td style="color:var(--danger);font-weight:700;">{{ inst.amount|inr }}</td>
+                  <td>
+                    <a href="{% url 'collect_installment' inst.loan.pk inst.num %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-teal">
+                      Collect
+                    </a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">
+                    🎉 Great! No overdue installments found.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 2. Mobile Cards View -->
+    <div class="mobile-card-view">
+      {% if report_type == 'summary' or report_type == 'customer' %}
+        {% for loan in report_data %}
+          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <a href="{% url 'loan_detail' loan.pk %}" style="font-weight:800;color:var(--primary);text-decoration:none;font-size:15px;">{{ loan.customer.name }}</a>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">{{ loan.customer.phone }} · <code>{{ loan.loan_id }}</code></div>
+              </div>
+              <span class="badge badge-{{ loan.status }}">{{ loan.status|title }}</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#f8fafc;padding:8px 10px;border-radius:8px;font-size:12px;">
+              <div>Gross: <strong>{{ loan.gross_principal|inr }}</strong></div>
+              <div>Disbursed: <strong style="color:var(--teal);">{{ loan.net_proceeds|inr }}</strong></div>
+              <div>Per Inst: <strong>{{ loan.installment_amount|inr }}</strong> ({{ loan.frequency|title }})</div>
+              <div>Paid: <strong style="color:var(--teal);">{{ loan.paid_total|inr }}</strong></div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-light);padding-top:6px;font-size:12px;">
+              <div>Outstanding: <strong style="color:var(--danger);font-size:14px;">{{ loan.outstanding|inr }}</strong></div>
+              <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-outline btn-sm">View Loan →</a>
+            </div>
+          </div>
+        {% empty %}
+          <div style="text-align:center;padding:24px;color:var(--text-muted);">No loans recorded yet.</div>
+        {% endfor %}
+
+      {% elif report_type == 'collection' %}
+        {% for inst in report_data %}
+          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <a href="{% url 'customer_detail' inst.loan.customer.pk %}" style="font-weight:800;color:var(--primary);text-decoration:none;font-size:14.5px;">{{ inst.loan.customer.name }}</a>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">{{ inst.loan.customer.phone }} · <code>{{ inst.loan.loan_id }}</code></div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:16px;font-weight:800;color:var(--teal);">{{ inst.paid_amount|inr }}</div>
+                <span class="badge badge-info">#{{ inst.num }}</span>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-light);padding-top:6px;font-size:11.5px;color:var(--text-muted);">
+              <div>Paid: <strong>{{ inst.paid_date|date:"d M Y" }}</strong></div>
+              <div>
+                {% if inst.payment_method == 'cashfree_auto' %}
+                  <span class="badge badge-active">AutoPay</span>
+                {% else %}
+                  <span class="badge badge-completed">Cash</span>
+                {% endif %}
+              </div>
+              <a href="{% url 'loan_detail' inst.loan.pk %}" style="color:var(--teal);font-weight:700;text-decoration:none;">Details →</a>
+            </div>
+          </div>
+        {% empty %}
+          <div style="text-align:center;padding:24px;color:var(--text-muted);">No collections recorded for this date.</div>
+        {% endfor %}
+
+      {% elif report_type == 'outstanding' %}
+        {% for loan in report_data %}
+          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <a href="{% url 'loan_detail' loan.pk %}" style="font-weight:800;color:var(--primary);text-decoration:none;font-size:14.5px;">{{ loan.customer.name }}</a>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">{{ loan.customer.phone }} · <code>{{ loan.loan_id }}</code></div>
+              </div>
+              <span class="badge badge-warning">{{ loan.pending_count }} Pending</span>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;padding:8px 10px;border-radius:8px;font-size:12px;">
+              <div>Gross: <strong>{{ loan.gross_principal|inr }}</strong></div>
+              <div>Paid: <strong style="color:var(--teal);">{{ loan.paid_total|inr }}</strong></div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-light);padding-top:6px;font-size:12px;">
+              <div>Outstanding: <strong style="color:var(--danger);font-size:15px;">{{ loan.outstanding|inr }}</strong></div>
+              <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-outline btn-sm">View Loan →</a>
+            </div>
+          </div>
+        {% empty %}
+          <div style="text-align:center;padding:24px;color:var(--text-muted);">No outstanding loans found.</div>
+        {% endfor %}
+
+      {% elif report_type == 'overdue' %}
+        {% for inst in report_data %}
+          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <strong style="color:var(--primary);font-size:14.5px;">{{ inst.loan.customer.name }}</strong>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">{{ inst.loan.customer.phone }} · <code>{{ inst.loan.loan_id }}</code></div>
+              </div>
+              <span class="badge badge-danger">#{{ inst.num }} Overdue</span>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-light);padding-top:6px;font-size:12px;">
+              <div>Due: <strong style="color:var(--danger);">{{ inst.due_date|date:"d M Y" }}</strong></div>
+              <div style="color:var(--danger);font-weight:800;font-size:15px;">{{ inst.amount|inr }}</div>
+              <a href="{% url 'collect_installment' inst.loan.pk inst.num %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-teal">
+                Collect
+              </a>
+            </div>
+          </div>
+        {% empty %}
+          <div style="text-align:center;padding:24px;color:var(--text-muted);">🎉 Great! No overdue installments found.</div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

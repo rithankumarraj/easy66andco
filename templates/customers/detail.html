@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}{{ customer.name }}{% endblock %}
+
+{% block content %}
+<!-- Customer Top Profile Card -->
+<div class="card">
+  <div class="card-header-row" style="flex-wrap:wrap;gap:10px;">
+    <div>
+      <span style="font-weight:700;color:var(--text-muted);font-size:0.82rem;">#{{ customer.customer_id }}</span>
+      <h2 style="font-size:1.3rem;font-weight:800;color:var(--primary);margin:2px 0 0 0;">{{ customer.name }}</h2>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <a href="{% url 'whatsapp_messenger' %}?phone={{ customer.phone }}&name={{ customer.name|urlencode }}" class="btn btn-teal btn-sm" title="Send WhatsApp Message">
+        <span class="material-symbols-outlined" style="font-size:16px;">chat</span>
+        <span>WhatsApp</span>
+      </a>
+      <a href="{% url 'loan_create' %}?customer={{ customer.pk }}" class="btn btn-teal btn-sm btn-corner">
+        <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+        <span data-i18n="btn_create_loan">Issue New Loan</span>
+      </a>
+      <a href="{% url 'customer_edit' customer.pk %}" class="btn btn-outline btn-sm">
+        <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+        <span data-i18n="btn_edit">Edit</span>
+      </a>
+      <a href="{% url 'customer_list' %}" class="btn btn-outline btn-sm" data-i18n="btn_back">Back</a>
+    </div>
+  </div>
+
+  <!-- Overall Customer Stats across all loans -->
+  <div class="stats-grid" style="margin-bottom:12px;">
+    <div class="stat-box">
+      <span class="stat-lbl">Total Borrowed</span>
+      <div class="stat-val">{{ total_borrowed|inr }}</div>
+      <div class="stat-sub">{{ loans|length }} total loans issued</div>
+    </div>
+
+    <div class="stat-box">
+      <span class="stat-lbl">Total Paid Back</span>
+      <div class="stat-val" style="color:var(--teal)">{{ total_paid|inr }}</div>
+      <div class="stat-sub">Across all loan accounts</div>
+    </div>
+
+    <div class="stat-box">
+      <span class="stat-lbl">Current Outstanding</span>
+      <div class="stat-val" style="color:var(--danger)">{{ outstanding|inr }}</div>
+      <div class="stat-sub">{{ customer.active_loans_count }} active loan(s)</div>
+    </div>
+  </div>
+
+  <div class="grid-cols-2" style="background:#f8fafc;padding:12px 14px;border-radius:var(--radius-md);font-size:0.84rem;">
+    <div>
+      <div><strong>Phone:</strong> {{ customer.phone }}</div>
+      <div style="margin-top:3px;"><strong>Email:</strong> {{ customer.email|default:"—" }}</div>
+      <div style="margin-top:3px;"><strong>Address:</strong> {{ customer.address|default:"—" }}</div>
+    </div>
+    <div>
+      <div><strong>Customer Since:</strong> {{ customer.created_at|date:"d M Y" }}</div>
+      <div style="margin-top:3px;"><strong>Active Loans:</strong> {{ customer.active_loans_count }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Mandatory KYC & Uploaded Documents -->
+<div class="card">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title" style="display:flex;align-items:center;gap:8px;">
+        <span class="material-symbols-outlined" style="color:var(--teal)">verified_user</span>
+        Mandatory KYC Documents (அவசிய ஆவணங்கள்)
+      </h3>
+      <div class="card-subtitle">Verified borrower documents uploaded for loan approvals.</div>
+    </div>
+    <a href="{% url 'customer_edit' customer.pk %}" class="btn btn-outline btn-sm">
+      <span class="material-symbols-outlined" style="font-size:15px;">upload</span> Update Documents
+    </a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:14px;margin-top:14px;">
+    <!-- 1. PAN Card -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;border-top:3px solid #0d9488;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#0d9488;text-transform:uppercase;letter-spacing:0.5px;">Identity Proof</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin:4px 0;">• PAN Card</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Mandatory for all loans</div>
+      </div>
+      <div>
+        {% if customer.pan_card_doc %}
+          <a href="{{ customer.pan_card_doc.url }}" target="_blank" class="btn btn-teal btn-sm" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span class="material-symbols-outlined" style="font-size:16px;">visibility</span> View PAN Card
+          </a>
+        {% else %}
+          <span class="badge badge-danger" style="display:inline-block;width:100%;text-align:center;padding:6px 0;">Missing / Not Uploaded</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 2. Aadhaar Card -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;border-top:3px solid #0284c7;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#0284c7;text-transform:uppercase;letter-spacing:0.5px;">Identity & Address</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin:4px 0;">• Aadhaar Card</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Mandatory for all loans</div>
+      </div>
+      <div>
+        {% if customer.aadhaar_card_doc %}
+          <a href="{{ customer.aadhaar_card_doc.url }}" target="_blank" class="btn btn-primary btn-sm" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span class="material-symbols-outlined" style="font-size:16px;">visibility</span> View Aadhaar Card
+          </a>
+        {% else %}
+          <span class="badge badge-danger" style="display:inline-block;width:100%;text-align:center;padding:6px 0;">Missing / Not Uploaded</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 3. Recent Utility Bill -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;border-top:3px solid #d97706;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.5px;">Address Verification</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-dark);margin:4px 0;">• Recent Utility Bill</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Electricity/water/gas within 2–3 mos</div>
+      </div>
+      <div>
+        {% if customer.utility_bill_doc %}
+          <a href="{{ customer.utility_bill_doc.url }}" target="_blank" class="btn btn-outline btn-sm" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;border-color:#d97706;color:#b45309;">
+            <span class="material-symbols-outlined" style="font-size:16px;">visibility</span> View Utility Bill
+          </a>
+        {% else %}
+          <span class="badge badge-danger" style="display:inline-block;width:100%;text-align:center;padding:6px 0;">Missing / Not Uploaded</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Customer's Loan Accounts -->
+<div class="card">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title">Loan Accounts ({{ loans|length }})</h3>
+      <div class="card-subtitle">All Thavanai loans taken by this customer.</div>
+    </div>
+    <a href="{% url 'loan_create' %}?customer={{ customer.pk }}" class="btn btn-teal btn-sm btn-corner">
+      + Issue Another Loan
+    </a>
+  </div>
+
+  {% if loans %}
+    <!-- 1. Desktop Table View -->
+    <div class="desktop-table-view">
+      <div class="table-responsive">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th data-i18n="th_loan_id">Loan ID</th>
+              <th data-i18n="th_gross">Gross</th>
+              <th data-i18n="th_net_cash">Cash Given</th>
+              <th data-i18n="th_frequency">Frequency</th>
+              <th data-i18n="th_per_inst">Per Inst</th>
+              <th data-i18n="th_paid">Paid</th>
+              <th data-i18n="th_balance">Balance</th>
+              <th>Progress</th>
+              <th data-i18n="th_status">Status</th>
+              <th style="text-align:right;" data-i18n="th_actions">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in loans %}
+              <tr>
+                <td><strong>{{ l.loan_id }}</strong></td>
+                <td>{{ l.gross_principal|inr }}</td>
+                <td style="color:var(--teal);font-weight:700;">{{ l.net_proceeds|inr }}</td>
+                <td>{{ l.frequency|title }}</td>
+                <td>{{ l.installment_amount|inr }}</td>
+                <td style="color:var(--teal);font-weight:700;">{{ l.paid_total|inr }}</td>
+                <td style="color:var(--danger);font-weight:700;">{{ l.outstanding|inr }}</td>
+                <td>{{ l.paid_count }} / {{ l.installment_count }}</td>
+                <td><span class="badge badge-{{ l.status }}">{{ l.status|title }}</span></td>
+                <td style="text-align:right;">
+                  <a href="{% url 'loan_detail' l.pk %}" class="btn btn-outline btn-sm">
+                    View Ledger & Schedule →
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. Mobile Cards View -->
+    <div class="mobile-card-view">
+      {% for l in loans %}
+        <div class="mobile-customer-card">
+          <div class="m-card-header">
+            <strong>{{ l.loan_id }}</strong>
+            <span class="badge badge-{{ l.status }}">{{ l.status|title }}</span>
+          </div>
+
+          <div class="m-card-body">
+            <div class="m-stats-row">
+              <div class="m-stat-item">
+                <span class="m-stat-lbl">Gross</span>
+                <span class="m-stat-val">{{ l.gross_principal|inr }}</span>
+              </div>
+              <div class="m-stat-item">
+                <span class="m-stat-lbl">Paid</span>
+                <span class="m-stat-val" style="color:var(--teal)">{{ l.paid_total|inr }}</span>
+              </div>
+              <div class="m-stat-item">
+                <span class="m-stat-lbl">Balance</span>
+                <span class="m-stat-val" style="color:var(--danger)">{{ l.outstanding|inr }}</span>
+              </div>
+            </div>
+
+            <div class="m-inst-progress">
+              <span>{{ l.frequency|title }} · {{ l.paid_count }}/{{ l.installment_count }} paid ({{ l.installment_amount|inr }})</span>
+            </div>
+          </div>
+
+          <div class="m-card-footer">
+            <a href="{% url 'loan_detail' l.pk %}" class="btn btn-outline m-view-all-btn">
+              <span>View Loan Ledger & Schedule</span>
+              <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div style="padding:32px;text-align:center;color:var(--text-muted);">
+      <p>No loans created for this customer yet.</p>
+      <a href="{% url 'loan_create' %}?customer={{ customer.pk }}" class="btn btn-teal btn-sm" style="margin-top:8px;">
+        + Issue First Loan
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

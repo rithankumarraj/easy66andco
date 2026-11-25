@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_loan_requests">Loan Requests</span>{% endblock %}
+
+{% block content %}
+<style>
+  .doc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .doc-pan {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+  }
+  .doc-pan:hover {
+    background: #059669;
+    color: #fff;
+  }
+  .doc-aadhaar {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+  .doc-aadhaar:hover {
+    background: #2563eb;
+    color: #fff;
+  }
+  .doc-utility {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+  }
+  .doc-utility:hover {
+    background: #d97706;
+    color: #fff;
+  }
+  .doc-missing {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    font-size: 10.5px;
+    padding: 3px 6px;
+  }
+</style>
+
+<div class="card">
+  <div class="card-header-row" style="flex-wrap:wrap;gap:12px;">
+    <div>
+      <h3 class="card-title">Borrower Loan Applications & Uploaded KYC</h3>
+      <div class="card-subtitle">Review incoming online requests, view uploaded PAN, Aadhaar & Utility Bills, and issue loans.</div>
+    </div>
+    
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="{% url 'whatsapp_messenger' %}" class="btn btn-teal btn-sm">
+        <span class="material-symbols-outlined">chat</span> Send Application Link via WhatsApp
+      </a>
+      <a href="{% url 'loan_request_public' %}" target="_blank" class="btn btn-outline btn-sm">
+        <span class="material-symbols-outlined">open_in_new</span> Open Public Application Form
+      </a>
+    </div>
+  </div>
+
+  <!-- Status Tabs -->
+  <div style="display:flex;gap:8px;margin-top:14px;border-bottom:1px solid var(--border);padding-bottom:12px;overflow-x:auto;">
+    <a href="{% url 'loan_request_list' %}" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline{% endif %}">
+      All ({{ counts.all }})
+    </a>
+    <a href="{% url 'loan_request_list' %}?status=pending" class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline{% endif %}">
+      Pending ({{ counts.pending }})
+    </a>
+    <a href="{% url 'loan_request_list' %}?status=approved" class="btn btn-sm {% if status_filter == 'approved' %}btn-primary{% else %}btn-outline{% endif %}">
+      Approved ({{ counts.approved }})
+    </a>
+    <a href="{% url 'loan_request_list' %}?status=rejected" class="btn btn-sm {% if status_filter == 'rejected' %}btn-primary{% else %}btn-outline{% endif %}">
+      Rejected ({{ counts.rejected }})
+    </a>
+  </div>
+
+  <form method="GET" class="filter-bar" style="margin-top:14px;">
+    {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+    <div class="form-group" style="flex:1;min-width:240px;">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search applicant name, phone, or Request ID..." class="form-control">
+    </div>
+    <button type="submit" class="btn btn-teal btn-sm" style="height:38px;">
+      <span class="material-symbols-outlined">search</span> Search
+    </button>
+    {% if q or status_filter %}
+      <a href="{% url 'loan_request_list' %}" class="btn btn-outline btn-sm" style="height:38px;line-height:38px;padding:0 14px;">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Desktop Table & Mobile Cards -->
+<div class="desktop-table-view">
+  <div class="card">
+    <div class="table-responsive">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Req ID</th>
+            <th>Applicant</th>
+            <th>Phone</th>
+            <th>Requested Amount</th>
+            <th>Freq</th>
+            <th>Employment</th>
+            <th>Uploaded Documents (Click to View)</th>
+            <th>Status</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+            <tr>
+              <td><strong>{{ req.request_id }}</strong></td>
+              <td>
+                <div style="font-weight:700;color:var(--text-dark);">{{ req.customer_name }}</div>
+                <div style="font-size:11.5px;color:var(--text-muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  {{ req.address }}
+                </div>
+              </td>
+              <td>
+                <div style="font-weight:600;">{{ req.phone }}</div>
+                <a href="{% url 'whatsapp_messenger' %}?phone={{ req.phone }}&name={{ req.customer_name|urlencode }}&request_id={{ req.request_id }}" 
+                   style="font-size:11px;color:var(--teal);display:inline-flex;align-items:center;gap:3px;text-decoration:none;">
+                  <span class="material-symbols-outlined" style="font-size:13px;">chat</span> WhatsApp
+                </a>
+              </td>
+              <td style="color:var(--teal);font-weight:800;font-size:15px;">
+                {{ req.requested_amount|inr }}
+              </td>
+              <td><span class="badge badge-info">{{ req.get_frequency_display }}</span></td>
+              <td>
+                <div style="font-size:12px;font-weight:600;">{{ req.get_employment_type_display }}</div>
+                {% if req.monthly_income %}
+                  <div style="font-size:11px;color:var(--text-muted);">Inc: {{ req.monthly_income|inr }}/mo</div>
+                {% endif %}
+              </td>
+              <td>
+                <!-- Clickable Uploaded Document Pills -->
+                <div style="display:flex;flex-wrap:wrap;gap:6px;max-width:280px;">
+                  {% if req.pan_card_doc %}
+                    <a href="{{ req.pan_card_doc.url }}" target="_blank" class="doc-pill doc-pan" title="Click to view PAN Card">
+                      <span class="material-symbols-outlined" style="font-size:14px;">description</span> PAN Card
+                    </a>
+                  {% else %}
+                    <span class="doc-pill doc-missing">No PAN</span>
+                  {% endif %}
+
+                  {% if req.aadhaar_card_doc %}
+                    <a href="{{ req.aadhaar_card_doc.url }}" target="_blank" class="doc-pill doc-aadhaar" title="Click to view Aadhaar Card">
+                      <span class="material-symbols-outlined" style="font-size:14px;">fingerprint</span> Aadhaar
+                    </a>
+                  {% else %}
+                    <span class="doc-pill doc-missing">No Aadhaar</span>
+                  {% endif %}
+
+                  {% if req.utility_bill_doc %}
+                    <a href="{{ req.utility_bill_doc.url }}" target="_blank" class="doc-pill doc-utility" title="Click to view Recent Utility Bill">
+                      <span class="material-symbols-outlined" style="font-size:14px;">receipt_long</span> Utility Bill
+                    </a>
+                  {% else %}
+                    <span class="doc-pill doc-missing">No Utility Bill</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                {% if req.status == 'approved' %}
+                  <span class="badge badge-active">Approved</span>
+                {% elif req.status == 'rejected' %}
+                  <span class="badge badge-danger">Rejected</span>
+                {% else %}
+                  <span class="badge badge-warning">Pending</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right;">
+                <div style="display:inline-flex;gap:6px;align-items:center;">
+                  <a href="{% url 'loan_request_convert' req.pk %}" class="btn btn-teal btn-sm" title="Convert to Customer & Issue Loan">
+                    <span class="material-symbols-outlined" style="font-size:15px;">check_circle</span> Issue Loan
+                  </a>
+
+                  {% if req.status == 'pending' %}
+                    <form method="POST" action="{% url 'loan_request_status_update' req.pk %}" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="status" value="rejected">
+                      <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" title="Reject Request">
+                        Reject
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" style="text-align:center;padding:36px;color:var(--text-muted);">
+                <div style="font-size:36px;margin-bottom:8px;">📋</div>
+                <h4 style="margin:0 0 6px 0;">No Loan Applications Found</h4>
+                <p style="margin:0 0 16px 0;font-size:13px;">Send the public loan request link to potential borrowers via WhatsApp.</p>
+                <a href="{% url 'whatsapp_messenger' %}" class="btn btn-teal btn-sm">
+                  <span class="material-symbols-outlined">chat</span> Open WhatsApp Messenger
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Cards View -->
+<div class="mobile-card-view">
+  {% for req in requests %}
+    <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);display:flex;flex-direction:column;gap:10px;">
+      
+      <!-- Top Row: Name, Request ID & Status Badge -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:15px;font-weight:800;color:var(--text-dark);line-height:1.25;word-break:break-word;">
+            {{ req.customer_name }}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11.5px;color:var(--text-muted);">
+            <span style="font-weight:700;background:#f1f5f9;color:#334155;padding:2px 6px;border-radius:4px;font-family:monospace;">{{ req.request_id }}</span>
+            <span>•</span>
+            <span>{{ req.created_at|date:"d M Y" }}</span>
+          </div>
+        </div>
+        <div>
+          {% if req.status == 'approved' %}
+            <span class="badge badge-active" style="font-size:11px;">Approved</span>
+          {% elif req.status == 'rejected' %}
+            <span class="badge badge-danger" style="font-size:11px;">Rejected</span>
+          {% else %}
+            <span class="badge badge-warning" style="font-size:11px;">Pending</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Address if available -->
+      {% if req.address %}
+        <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:flex-start;gap:4px;line-height:1.35;">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--text-muted);margin-top:1px;flex-shrink:0;">location_on</span>
+          <span>{{ req.address }}</span>
+        </div>
+      {% endif %}
+
+      <!-- Phone & WhatsApp Quick Connect -->
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;padding:8px 10px;border-radius:8px;font-size:12.5px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="material-symbols-outlined" style="font-size:16px;color:var(--text-muted);">phone_iphone</span>
+          <a href="tel:{{ req.phone }}" style="font-weight:700;color:var(--text-dark);text-decoration:none;">{{ req.phone }}</a>
+        </div>
+        <a href="{% url 'whatsapp_messenger' %}?phone={{ req.phone }}&name={{ req.customer_name|urlencode }}&request_id={{ req.request_id }}" 
+           style="color:#047857;font-weight:700;font-size:11.5px;display:inline-flex;align-items:center;gap:4px;text-decoration:none;background:#ecfdf5;border:1px solid #a7f3d0;padding:3px 9px;border-radius:6px;">
+          <span class="material-symbols-outlined" style="font-size:13px;">chat</span> WhatsApp
+        </a>
+      </div>
+
+      <!-- Requested Amount, Frequency & Employment Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 0;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;">
+        <div>
+          <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.3px;">Requested Loan</div>
+          <div style="font-size:16px;font-weight:800;color:var(--teal);margin-top:2px;">{{ req.requested_amount|inr }}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            Frequency: <strong style="color:var(--text-dark);">{{ req.get_frequency_display }}</strong>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.3px;">Employment</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--text-dark);margin-top:2px;">{{ req.get_employment_type_display }}</div>
+          {% if req.monthly_income %}
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+              Income: <strong style="color:var(--text-dark);">{{ req.monthly_income|inr }}/mo</strong>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Uploaded Documents Pills -->
+      <div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.3px;">
+          Uploaded Documents (Tap to View):
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          {% if req.pan_card_doc %}
+            <a href="{{ req.pan_card_doc.url }}" target="_blank" class="doc-pill doc-pan">
+              <span class="material-symbols-outlined" style="font-size:13px;">description</span> PAN Card
+            </a>
+          {% else %}
+            <span class="doc-pill doc-missing">No PAN</span>
+          {% endif %}
+
+          {% if req.aadhaar_card_doc %}
+            <a href="{{ req.aadhaar_card_doc.url }}" target="_blank" class="doc-pill doc-aadhaar">
+              <span class="material-symbols-outlined" style="font-size:13px;">fingerprint</span> Aadhaar
+            </a>
+          {% else %}
+            <span class="doc-pill doc-missing">No Aadhaar</span>
+          {% endif %}
+
+          {% if req.utility_bill_doc %}
+            <a href="{{ req.utility_bill_doc.url }}" target="_blank" class="doc-pill doc-utility">
+              <span class="material-symbols-outlined" style="font-size:13px;">receipt_long</span> Utility Bill
+            </a>
+          {% else %}
+            <span class="doc-pill doc-missing">No Utility Bill</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Actions Row: Issue Loan / Reject -->
+      <div style="display:flex;gap:8px;margin-top:2px;padding-top:4px;">
+        <a href="{% url 'loan_request_convert' req.pk %}" class="btn btn-teal btn-sm" style="flex:1;justify-content:center;height:38px;font-weight:700;text-decoration:none;">
+          <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> Issue Loan
+        </a>
+        {% if req.status == 'pending' %}
+          <form method="POST" action="{% url 'loan_request_status_update' req.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="rejected">
+            <button type="submit" class="btn btn-outline btn-sm" style="height:38px;color:var(--danger);border-color:var(--danger);padding:0 14px;" title="Reject Request">
+              Reject
+            </button>
+          </form>
+        {% endif %}
+      </div>
+
+    </div>
+  {% empty %}
+    <div class="card" style="padding:32px 16px;text-align:center;color:var(--text-muted);">
+      <div style="font-size:32px;margin-bottom:8px;">📋</div>
+      <h4 style="margin:0 0 6px 0;">No Loan Applications Found</h4>
+      <p style="margin:0 0 14px 0;font-size:13px;">Send the public loan request link to potential borrowers via WhatsApp.</p>
+      <a href="{% url 'whatsapp_messenger' %}" class="btn btn-teal btn-sm">
+        <span class="material-symbols-outlined">chat</span> Open WhatsApp Messenger
+      </a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

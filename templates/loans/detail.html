@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}{{ loan.loan_id }} — {{ loan.customer.name }}{% endblock %}
+
+{% block content %}
+<!-- Loan Top Summary -->
+<div class="card">
+  <div class="card-header-row" style="flex-wrap:wrap;gap:10px;">
+    <div>
+      <span style="font-weight:700;color:var(--text-muted);font-size:0.82rem;">{{ loan.loan_id }}</span>
+      <h2 style="font-size:1.3rem;font-weight:800;color:var(--primary);margin:2px 0 0 0;">
+        <a href="{% url 'customer_detail' loan.customer.pk %}" style="color:inherit;text-decoration:none;">
+          {{ loan.customer.name }}
+        </a>
+      </h2>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      {% if loan.status != 'completed' %}
+      <a href="{% url 'settle_full_loan' loan.pk %}" class="btn btn-primary btn-sm btn-corner"
+        onclick="return confirm('Settle all remaining {{ loan.pending_count }} installments ({{ outstanding|inr }}) in full for {{ loan.customer.name }}?')">
+        <span class="material-symbols-outlined" style="font-size:16px;">done_all</span>
+        <span data-i18n="btn_settle_all">Settle Full Balance</span>
+      </a>
+      {% endif %}
+      <a href="{% url 'whatsapp_messenger' %}?phone={{ loan.customer.phone }}&name={{ loan.customer.name|urlencode }}" class="btn btn-teal btn-sm" title="Send WhatsApp Message">
+        <span class="material-symbols-outlined" style="font-size:16px;">chat</span>
+        <span>WhatsApp</span>
+      </a>
+      <a href="{% url 'loan_edit' loan.pk %}" class="btn btn-outline btn-sm">
+        <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+        <span data-i18n="btn_edit">Edit</span>
+      </a>
+      <a href="{% url 'loan_list' %}" class="btn btn-outline btn-sm" data-i18n="btn_back">Back</a>
+    </div>
+  </div>
+
+  <!-- Thavanai Stats -->
+  <div class="stats-grid" style="margin-bottom:12px;">
+    <div class="stat-box">
+      <span class="stat-lbl" data-i18n="lbl_gross_principal">Gross Principal</span>
+      <div class="stat-val">{{ loan.gross_principal|inr }}</div>
+      <div class="stat-sub">{{ loan.interest_rate }}% Upfront ({{ loan.upfront_interest|inr }})</div>
+    </div>
+
+    <div class="stat-box">
+      <span class="stat-lbl" data-i18n="lbl_cash_disbursed">Cash Disbursed</span>
+      <div class="stat-val" style="color:var(--teal)">{{ loan.net_proceeds|inr }}</div>
+      <div class="stat-sub">Given at issuance</div>
+    </div>
+
+    <div class="stat-box">
+      <span class="stat-lbl" data-i18n="lbl_installment_amount">Per Installment</span>
+      <div class="stat-val" style="color:var(--primary)">{{ loan.installment_amount|inr }}</div>
+      <div class="stat-sub">{{ loan.frequency|title }} · {{ loan.installment_count }} installments</div>
+    </div>
+
+    <div class="stat-box">
+      <span class="stat-lbl" data-i18n="th_outstanding">Outstanding Balance</span>
+      <div class="stat-val" style="color:var(--danger)">{{ outstanding|inr }}</div>
+      <div class="stat-sub">
+        <span class="badge badge-{{ loan.status }}">{{ loan.status|title }}</span>
+        · Paid: {{ paid_total|inr }}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-cols-2" style="background:#f8fafc;padding:12px 14px;border-radius:var(--radius-md);font-size:0.84rem;gap:10px;">
+    <div>
+      <div><strong>Customer:</strong> <a href="{% url 'customer_detail' loan.customer.pk %}">{{ loan.customer.name }} (#{{ loan.customer.customer_id }})</a></div>
+      <div style="margin-top:4px;"><strong>Phone:</strong> {{ loan.customer.phone }}</div>
+      <div style="margin-top:4px;"><strong>Address:</strong> {{ loan.customer.address|default:"—" }}</div>
+    </div>
+    <div>
+      <div><strong>Start Date:</strong> {{ loan.start_date|date:"d M Y" }}</div>
+      <div style="margin-top:4px;"><strong>Assigned Staff:</strong> {{ loan.assigned_staff.get_full_name|default:loan.assigned_staff|default:"Unassigned" }}</div>
+      <div style="margin-top:4px;"><strong>Installments Progress:</strong> {{ loan.paid_count }} of {{ loan.installment_count }} collected</div>
+    </div>
+  </div>
+</div>
+
+<!-- Cashfree AutoPay & Subscription Mandate Card -->
+<div class="card" style="border:1.5px solid #c7d2fe;background:#fbfbfe;margin-bottom:12px;">
+  <div class="card-header-row" style="margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div
+        style="background:#4338ca;color:#ffffff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span class="material-symbols-outlined" style="font-size:20px;">bolt</span>
+      </div>
+      <div>
+        <h4 style="margin:0;font-size:0.96rem;font-weight:800;color:#1e1b4b;">Cashfree AutoPay & Subscriptions</h4>
+        <div style="font-size:0.75rem;color:var(--text-muted);">
+          Automated recurring collections via UPI AutoPay & eNACH Mandate.
+        </div>
+      </div>
+    </div>
+
+    <div>
+      {% if not loan.cashfree_subscription_id %}
+      <a href="{% url 'create_loan_mandate' loan.pk %}" class="btn btn-teal btn-sm"
+        onclick="return confirm('Initiate Cashfree AutoPay subscription mandate for {{ loan.customer.name }}?')">
+        <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+        Set Up Cashfree AutoPay
+      </a>
+      {% else %}
+      <span
+        class="badge {% if loan.cashfree_sub_status == 'ACTIVE' %}badge-active{% elif loan.cashfree_sub_status == 'COMPLETED' %}badge-completed{% else %}badge-pending{% endif %}"
+        style="font-size:0.8rem;padding:4px 10px;">
+        ● Mandate: {{ loan.cashfree_sub_status|default:"INITIALIZED" }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if loan.cashfree_subscription_id %}
+  <div class="grid-cols-2" style="background:#ffffff;border:1px solid #e0e7ff;border-radius:var(--radius-sm);padding:12px;margin-top:8px;font-size:0.82rem;gap:12px;">
+    <div style="min-width:0;">
+      <div style="color:var(--text-muted);font-size:0.75rem;">Subscription ID:</div>
+      <strong style="color:#312e81;font-family:monospace;word-break:break-all;font-size:0.85rem;">{{ loan.cashfree_subscription_id }}</strong>
+      <div style="margin-top:6px;color:var(--text-muted);font-size:0.75rem;">Recurring Debit:</div>
+      <strong style="color:var(--teal);font-size:0.95rem;">{{ loan.installment_amount|inr }}</strong> / {{ loan.frequency|title }}
+    </div>
+
+    <div>
+      <div style="color:var(--text-muted);font-size:0.75rem;">Customer Mandate Link:</div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+        {% if loan.cashfree_auth_link %}
+        <a href="{% url 'send_loan_autopay_whatsapp' loan.pk %}" class="btn btn-teal btn-sm"
+          style="font-size:0.76rem;background:#059669;border-color:#059669;" title="Send WhatsApp Interactive AutoPay card">
+          <span class="material-symbols-outlined" style="font-size:14px;">chat</span>
+          Send WhatsApp AutoPay Link
+        </a>
+        <a href="{{ loan.cashfree_auth_link }}" target="_blank" class="btn btn-primary btn-sm"
+          style="font-size:0.76rem;">
+          <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span> Open Checkout
+        </a>
+        <button type="button" class="btn btn-outline btn-sm" style="font-size:0.76rem;"
+          onclick="navigator.clipboard.writeText('{{ loan.cashfree_auth_link }}'); alert('Mandate authorization link copied! You can send it to the borrower on WhatsApp / SMS.');">
+          <span class="material-symbols-outlined" style="font-size:14px;">content_copy</span> Copy Link
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions Bar -->
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <a href="{% url 'sync_loan_mandate' loan.pk %}" class="btn btn-outline btn-sm"
+        title="Check live status from Cashfree">
+        <span class="material-symbols-outlined" style="font-size:15px;">sync</span> Sync Cashfree Status
+      </a>
+
+      {% if loan.cashfree_auth_link and 'simulator' in loan.cashfree_auth_link %}
+      <a href="{{ loan.cashfree_auth_link }}" class="btn btn-outline btn-sm"
+        style="color:#4338ca;border-color:#c7d2fe;">
+        <span class="material-symbols-outlined" style="font-size:15px;">science</span> Open Sandbox Simulator
+      </a>
+      {% endif %}
+    </div>
+
+    {% if loan.status != 'completed' %}
+    <a href="{% url 'charge_mandate_next' loan.pk %}" class="btn btn-teal btn-sm"
+      onclick="return confirm('Trigger Cashfree AutoPay debit for the next pending installment ({{ loan.installment_amount|inr }})?')">
+      <span class="material-symbols-outlined" style="font-size:16px;">bolt</span> Auto-Debit Next Installment
+    </a>
+    {% endif %}
+  </div>
+  {% else %}
+  <div style="font-size:0.8rem;color:var(--text-muted);padding:4px 0;">
+    No recurring mandate configured yet. Click <strong>"Set Up Cashfree AutoPay"</strong> to generate a customer
+    authorization link via UPI AutoPay or eNACH.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Installment Schedule -->
+<div class="card">
+  <div class="card-header-row">
+    <h3 class="card-title" data-i18n="sec_installments_schedule">Installment Repayment Schedule</h3>
+    <span class="card-subtitle">Installments can be collected individually or settled in full.</span>
+  </div>
+
+  <!-- 1. Desktop Table View -->
+  <div class="desktop-table-view">
+    <div class="table-responsive">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th data-i18n="th_due_date">Due Date</th>
+            <th data-i18n="th_amount">Amount</th>
+            <th data-i18n="th_status">Status</th>
+            <th data-i18n="th_paid_date">Paid Date</th>
+            <th data-i18n="th_paid">Paid Amount</th>
+            <th data-i18n="th_staff">Collected By</th>
+            <th style="text-align:right;" data-i18n="th_actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inst in installments %}
+          <tr>
+            <td><strong>#{{ inst.num }}</strong></td>
+            <td>{{ inst.due_date|date:"d M Y" }}</td>
+            <td style="font-weight:700;">{{ inst.amount|inr }}</td>
+            <td><span class="badge badge-{{ inst.status }}">{{ inst.status|title }}</span></td>
+            <td>{{ inst.paid_date|date:"d M Y"|default:"—" }}</td>
+            <td style="color:var(--teal);font-weight:700;">
+              {% if inst.paid_amount > 0 %}{{ inst.paid_amount|inr }}{% else %}—{% endif %}
+            </td>
+            <td>
+              {% if inst.payment_method == 'cashfree_auto' %}
+              <span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:700;">
+                <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">bolt</span>
+                Cashfree AutoPay
+              </span>
+              {% elif inst.collected_by %}
+              {{ inst.collected_by.get_full_name|default:inst.collected_by }}
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td style="text-align:right;">
+              {% if inst.status != 'paid' %}
+              <a href="{% url 'collect_installment' loan.pk inst.num %}" class="btn btn-teal btn-sm"
+                onclick="return confirm('Collect {{ inst.amount|inr }} for Installment #{{ inst.num }}?')"
+                data-i18n="btn_collect">
+                Collect
+              </a>
+              {% else %}
+              <span style="color:var(--success);font-weight:700;font-size:0.78rem;">✓ Paid</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. Mobile Installment Cards View -->
+  <div class="mobile-card-view">
+    {% for inst in installments %}
+    <div
+      style="background:#ffffff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <strong>#{{ inst.num }}</strong>
+          <span class="badge badge-{{ inst.status }}">{{ inst.status|title }}</span>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+          Due: {{ inst.due_date|date:"d M Y" }}
+          {% if inst.paid_date %}· Paid: {{ inst.paid_date|date:"d M Y" }}{% endif %}
+        </div>
+        <div style="font-weight:800;color:var(--primary);margin-top:2px;">{{ inst.amount|inr }}</div>
+      </div>
+
+      <div>
+        {% if inst.status != 'paid' %}
+        <a href="{% url 'collect_installment' loan.pk inst.num %}" class="btn btn-teal btn-sm"
+          onclick="return confirm('Collect {{ inst.amount|inr }} for Installment #{{ inst.num }}?')"
+          data-i18n="btn_collect">
+          Collect
+        </a>
+        {% else %}
+        <span style="color:var(--success);font-weight:700;font-size:0.78rem;">✓ Paid</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

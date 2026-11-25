@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_customers">Customers</span>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Card Header: Title on left, Add Customer button in the right corner -->
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title"><span data-i18n="nav_customers">Customers</span> ({{ customers|length }})</h3>
+      <div class="card-subtitle">Customer directory and active loan accounts.</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <a href="{% url 'customer_add' %}" class="btn btn-outline btn-sm btn-corner">
+        <span class="material-symbols-outlined" style="font-size:16px;">person_add</span>
+        <span data-i18n="btn_add_customer">Add Customer</span>
+      </a>
+      <a href="{% url 'loan_create' %}" class="btn btn-teal btn-sm btn-corner">
+        <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+        <span data-i18n="btn_create_loan">Create Loan</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Sort Filter -->
+  <form method="GET" class="filter-bar">
+    <div class="form-group" style="flex:1;min-width:180px;">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, ID..." data-i18n-ph="ph_search_global" class="form-control">
+    </div>
+    <div class="form-group" style="min-width:140px;">
+      <select name="sort" class="form-control" onchange="this.form.submit()">
+        <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest First</option>
+        <option value="name" {% if sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm" data-i18n="btn_filter">Filter</button>
+    {% if q %}
+      <a href="{% url 'customer_list' %}" class="btn btn-outline btn-sm">Reset</a>
+    {% endif %}
+  </form>
+
+  {% if customers %}
+    <!-- 1. Desktop Table View -->
+    <div class="desktop-table-view">
+      <div class="table-responsive">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th data-i18n="th_id">ID</th>
+              <th data-i18n="th_customer">Customer</th>
+              <th data-i18n="th_phone">Phone</th>
+              <th>Total Loans</th>
+              <th>Active Loans</th>
+              <th data-i18n="th_gross">Total Borrowed</th>
+              <th data-i18n="th_paid">Total Paid</th>
+              <th data-i18n="th_outstanding">Balance</th>
+              <th style="text-align:right;" data-i18n="th_actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in customers %}
+              <tr>
+                <td><span style="font-weight:700;color:var(--text-muted);">{{ c.customer_id }}</span></td>
+                <td><strong style="color:var(--primary);">{{ c.name }}</strong></td>
+                <td>{{ c.phone }}</td>
+                <td><strong>{{ c.total_loans_count }}</strong> loans</td>
+                <td>
+                  {% if c.active_loans_count > 0 %}
+                    <span class="badge badge-active">{{ c.active_loans_count }} active</span>
+                  {% else %}
+                    <span class="badge badge-completed">0 active</span>
+                  {% endif %}
+                </td>
+                <td><strong>{{ c.total_borrowed|inr }}</strong></td>
+                <td style="color:var(--teal);font-weight:700;">{{ c.total_paid|inr }}</td>
+                <td style="color:var(--danger);font-weight:700;">{{ c.total_outstanding|inr }}</td>
+                <td style="text-align:right;">
+                  <a href="{% url 'loan_create' %}?customer={{ c.pk }}" class="btn btn-teal btn-sm" title="Issue new loan to this customer">
+                    + Loan
+                  </a>
+                  <a href="{% url 'customer_detail' c.pk %}" class="btn-icon" title="View"><span class="material-symbols-outlined">visibility</span></a>
+                  <a href="{% url 'customer_edit' c.pk %}" class="btn-icon" title="Edit"><span class="material-symbols-outlined">edit</span></a>
+                  <a href="{% url 'customer_delete' c.pk %}" class="btn-icon" title="Delete" onclick="return confirm('Delete customer {{ c.name }}?')"><span class="material-symbols-outlined" style="color:var(--danger)">delete</span></a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. Mobile Card View -->
+    <div class="mobile-card-view">
+      {% for c in customers %}
+        <div class="mobile-customer-card">
+          <div class="m-card-header">
+            <div class="m-cust-name-id">
+              <span class="m-cust-id">#{{ c.customer_id }}</span>
+              <strong class="m-cust-name">{{ c.name }}</strong>
+            </div>
+            {% if c.active_loans_count > 0 %}
+              <span class="badge badge-active">{{ c.active_loans_count }} Active</span>
+            {% else %}
+              <span class="badge badge-completed">Completed</span>
+            {% endif %}
+          </div>
+
+          <div class="m-card-body">
+            <div class="m-info-line">
+              <span class="material-symbols-outlined" style="font-size:15px;">call</span>
+              <span>{{ c.phone }}</span>
+              <span class="m-freq-badge">{{ c.total_loans_count }} Loans</span>
+            </div>
+
+            <div class="m-stats-row">
+              <div class="m-stat-item">
+                <span class="m-stat-lbl">Borrowed</span>
+                <span class="m-stat-val">{{ c.total_borrowed|inr }}</span>
+              </div>
+              <div class="m-stat-item">
+                <span class="m-stat-lbl" data-i18n="th_paid">Paid</span>
+                <span class="m-stat-val" style="color:var(--teal)">{{ c.total_paid|inr }}</span>
+              </div>
+              <div class="m-stat-item">
+                <span class="m-stat-lbl" data-i18n="th_balance">Balance</span>
+                <span class="m-stat-val" style="color:var(--danger)">{{ c.total_outstanding|inr }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="m-card-footer" style="display:flex;gap:6px;">
+            <a href="{% url 'loan_create' %}?customer={{ c.pk }}" class="btn btn-teal btn-sm" style="flex:1;justify-content:center;">
+              + Issue Loan
+            </a>
+            <a href="{% url 'customer_detail' c.pk %}" class="btn btn-outline btn-sm m-view-all-btn" style="flex:2;">
+              <span data-i18n="btn_view_all_details">Click to view all details</span>
+              <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div style="padding:40px;text-align:center;color:var(--text-muted);">
+      <span class="material-symbols-outlined" style="font-size:40px;opacity:0.4;">group_off</span>
+      <p style="margin-top:6px;font-size:0.86rem;">No customers found matching the search criteria.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

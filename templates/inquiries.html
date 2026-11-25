@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="inquiry_title">Loan Inquiry & Estimation</span>{% endblock %}
+
+{% block content %}
+<!-- Top Header Card -->
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title" data-i18n="inquiry_title">Loan Inquiry & Estimation</h3>
+      <div class="card-subtitle" data-i18n="inquiry_subtitle">
+        Instant Thavanai loan estimation without creating a customer record.
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <a href="{% url 'loan_create' %}?gross={{ gross|floatformat:0 }}&net={{ net_proceeds|floatformat:0 }}&freq={{ frequency }}&count={{ installment_count }}" class="btn btn-teal btn-corner" id="issueLoanBtn" title="Create a real loan with these exact numbers">
+        <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+        <span data-i18n="btn_issue_this_loan">Issue This Loan</span>
+      </a>
+      <a href="{% url 'inquiry_pdf' %}?gross={{ gross|floatformat:0 }}&net={{ net_proceeds|floatformat:0 }}&freq={{ frequency }}&count={{ installment_count }}&start_date={{ start_date|date:'Y-m-d' }}" class="btn btn-outline btn-sm" id="downloadPdfBtn" title="Download quotation slip as PDF">
+        <span class="material-symbols-outlined" style="font-size:16px;">picture_as_pdf</span>
+        <span data-i18n="btn_download_quotation">Quotation PDF</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Quick Amount Presets -->
+  <div style="margin-bottom:10px;">
+    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;" data-i18n="lbl_quick_presets">
+      Quick Amount Presets
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-sm btn-outline preset-chip {% if gross == 5000 %}btn-primary{% endif %}" onclick="setGross(5000)">₹5,000</button>
+      <button type="button" class="btn btn-sm btn-outline preset-chip {% if gross == 10000 %}btn-primary{% endif %}" onclick="setGross(10000)">₹10,000</button>
+      <button type="button" class="btn btn-sm btn-outline preset-chip {% if gross == 15000 %}btn-primary{% endif %}" onclick="setGross(15000)">₹15,000</button>
+      <button type="button" class="btn btn-sm btn-outline preset-chip {% if gross == 20000 %}btn-primary{% endif %}" onclick="setGross(20000)">₹20,000</button>
+      <button type="button" class="btn btn-sm btn-outline preset-chip {% if gross == 30000 %}btn-primary{% endif %}" onclick="setGross(30000)">₹30,000</button>
+      <button type="button" class="btn btn-sm btn-outline preset-chip {% if gross == 50000 %}btn-primary{% endif %}" onclick="setGross(50000)">₹50,000</button>
+      <button type="button" class="btn btn-sm btn-outline preset-chip {% if gross == 100000 %}btn-primary{% endif %}" onclick="setGross(100000)">₹1,00,000</button>
+    </div>
+  </div>
+
+  <!-- Estimation Parameters Form -->
+  <form method="GET" action="{% url 'inquiries' %}" id="inquiryForm" style="display:flex;flex-direction:column;gap:12px;">
+    <div class="form-grid">
+      <!-- 1. Gross Principal Input -->
+      <div class="form-group">
+        <label data-i18n="lbl_gross_principal">Gross Principal (₹) *</label>
+        <input type="number" name="gross" id="inq_gross" class="form-control" value="{{ gross|floatformat:0 }}" min="500" step="100" required oninput="onGrossChange()">
+      </div>
+
+      <!-- 2. Cash Disbursed Input (Primary field instead of upfront interest) -->
+      <div class="form-group">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <label data-i18n="lbl_cash_disbursed">Cash Disbursed (Net ₹) *</label>
+          <div style="display:flex;gap:4px;">
+            <button type="button" class="btn btn-sm btn-outline" style="padding:1px 6px;font-size:0.7rem;" onclick="setDisbursedPct(80)">80%</button>
+            <button type="button" class="btn btn-sm btn-outline" style="padding:1px 6px;font-size:0.7rem;" onclick="setDisbursedPct(85)">85%</button>
+            <button type="button" class="btn btn-sm btn-outline" style="padding:1px 6px;font-size:0.7rem;" onclick="setDisbursedPct(90)">90%</button>
+            <button type="button" class="btn btn-sm btn-outline" style="padding:1px 6px;font-size:0.7rem;" onclick="setDisbursedPct(75)">75%</button>
+          </div>
+        </div>
+        <input type="number" name="net" id="inq_net" class="form-control" value="{{ net_proceeds|floatformat:0 }}" min="100" step="100" required style="font-weight:700;color:var(--teal);" oninput="onNetChange()">
+        <input type="hidden" name="rate" id="inq_rate" value="{{ interest_rate }}">
+        <div style="font-size:0.73rem;color:var(--text-muted);margin-top:2px;">
+          <span data-i18n="lbl_upfront_interest">Upfront Interest Deducted</span>: <strong style="color:var(--danger)" id="disp_interest_deducted">{{ upfront_interest|inr }}</strong> (<span id="disp_rate_pct">{{ interest_rate }}</span>%)
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label data-i18n="lbl_frequency">Collection Frequency *</label>
+        <select name="freq" id="inq_freq" class="form-control" onchange="handleFreqChange()">
+          <option value="daily" {% if frequency == 'daily' %}selected{% endif %}>Daily (தினசரி)</option>
+          <option value="weekly" {% if frequency == 'weekly' %}selected{% endif %}>Weekly (வாராந்திர)</option>
+          <option value="monthly" {% if frequency == 'monthly' %}selected{% endif %}>Monthly (மாதாந்திர)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="lbl_installment_count">Total Installments *</label>
+        <input type="number" name="count" id="inq_count" class="form-control" value="{{ installment_count }}" min="1" max="500" required oninput="recalcLive()">
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label data-i18n="lbl_start_date">Start Date</label>
+        <input type="date" name="start_date" id="inq_start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}" onchange="recalcLive()">
+      </div>
+
+      <div class="form-group" style="justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary" style="height:38px;justify-content:center;">
+          <span class="material-symbols-outlined">calculate</span>
+          <span data-i18n="btn_estimate_now">Calculate Estimation</span>
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Estimation Summary Metrics (Single ₹ sign everywhere) -->
+<div class="stats-grid" style="margin-bottom:12px;">
+  <!-- Gross Principal -->
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_gross_principal">Gross Principal</span>
+      <div class="stat-icon-wrap blue"><span class="material-symbols-outlined">receipt</span></div>
+    </div>
+    <div class="stat-val" id="disp_gross">{{ gross|inr }}</div>
+    <div class="stat-sub" data-i18n="lbl_total_repayment">Total Repayment</div>
+  </div>
+
+  <!-- Cash Disbursed (Prominent) -->
+  <div class="stat-box" style="border:1.5px solid #a7f3d0;background:#f0fdf9;">
+    <div class="stat-top">
+      <span class="stat-lbl" style="color:var(--teal);font-weight:700;" data-i18n="lbl_cash_disbursed">Cash Disbursed (Net)</span>
+      <div class="stat-icon-wrap teal"><span class="material-symbols-outlined">payments</span></div>
+    </div>
+    <div class="stat-val" style="color:var(--teal)" id="disp_net">{{ net_proceeds|inr }}</div>
+    <div class="stat-sub" style="color:var(--teal);font-weight:600;">Cash given to customer</div>
+  </div>
+
+  <!-- Upfront Interest Deducted -->
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_upfront_interest">Upfront Interest</span>
+      <div class="stat-icon-wrap rose"><span class="material-symbols-outlined">percent</span></div>
+    </div>
+    <div class="stat-val" style="color:var(--danger)" id="disp_interest">{{ upfront_interest|inr }}</div>
+    <div class="stat-sub"><span id="disp_stat_rate_pct">{{ interest_rate }}</span>% Upfront Deducted</div>
+  </div>
+
+  <!-- Per Installment Repayment -->
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_installment_amount">Per Installment</span>
+      <div class="stat-icon-wrap amber"><span class="material-symbols-outlined">schedule</span></div>
+    </div>
+    <div class="stat-val" style="color:var(--primary)" id="disp_emi">{{ installment_amount|inr }}</div>
+    <div class="stat-sub" id="disp_freq_count">{{ installment_count }} {{ frequency|title }} Installments</div>
+  </div>
+</div>
+
+<!-- Projection Summary Details Bar -->
+<div class="card" style="margin-bottom:12px;background:#f8fafc;padding:12px 14px;border:1px solid var(--border);">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+    <div>
+      <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;" data-i18n="lbl_start_date">Start Date</span>
+      <div style="font-weight:800;color:var(--primary);font-size:0.95rem;" id="disp_start_date">{{ start_date|date:"d M Y" }}</div>
+    </div>
+    <div>
+      <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;" data-i18n="lbl_projected_end">Projected Completion</span>
+      <div style="font-weight:800;color:var(--teal);font-size:0.95rem;" id="disp_end_date">{{ end_date|date:"d M Y" }}</div>
+    </div>
+    <div>
+      <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;" data-i18n="lbl_tenure">Tenure</span>
+      <div style="font-weight:800;color:var(--primary);font-size:0.95rem;" id="disp_tenure">{{ installment_count }} {{ frequency|title }}s</div>
+    </div>
+    <div>
+      <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;" data-i18n="lbl_total_repayment">Total Repayment</span>
+      <div style="font-weight:800;color:var(--primary);font-size:0.95rem;" id="disp_total_repay">{{ gross|inr }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Projected Repayment Schedule Table & Cards -->
+<div class="card">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title" data-i18n="lbl_projected_schedule">Projected Repayment Schedule</h3>
+      <div class="card-subtitle">
+        Estimated payment due dates and declining balance across {{ installment_count }} installments.
+      </div>
+    </div>
+    <button type="button" class="btn btn-outline btn-sm btn-corner" id="toggleScheduleBtn" onclick="toggleFullSchedule()">
+      <span class="material-symbols-outlined" style="font-size:16px;">expand_more</span>
+      <span id="toggleScheduleText" data-i18n="lbl_show_all_inst">Show All Installments</span>
+    </button>
+  </div>
+
+  <!-- 1. Desktop Table View -->
+  <div class="desktop-table-view">
+    <div class="table-responsive">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th style="width:70px;">#</th>
+            <th data-i18n="th_due_date">Projected Due Date</th>
+            <th data-i18n="th_amount">Installment Amount</th>
+            <th data-i18n="th_cum_paid">Cumulative Paid</th>
+            <th data-i18n="th_rem_bal">Remaining Balance</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleTableBody">
+          {% for inst in schedule %}
+            <tr class="schedule-row {% if forloop.counter > 15 %}schedule-extra{% endif %}" {% if forloop.counter > 15 %}style="display:none;"{% endif %}>
+              <td><strong>#{{ inst.num }}</strong></td>
+              <td>{{ inst.due_date|date:"d M Y" }}</td>
+              <td style="color:var(--primary);font-weight:700;">{{ inst.amount|inr }}</td>
+              <td style="color:var(--teal);font-weight:700;">{{ inst.cumulative_paid|inr }}</td>
+              <td style="color:var(--danger);font-weight:700;">{{ inst.balance|inr }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. Mobile Cards View -->
+  <div class="mobile-card-view" id="scheduleMobileCards">
+    {% for inst in schedule %}
+      <div class="schedule-row-card {% if forloop.counter > 10 %}schedule-extra{% endif %}" style="background:#ffffff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;{% if forloop.counter > 10 %}display:none;{% endif %}">
+        <div>
+          <div style="font-weight:800;color:var(--primary);font-size:0.88rem;">#{{ inst.num }} · {{ inst.due_date|date:"d M Y" }}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+            Cumulative: <strong style="color:var(--teal);">{{ inst.cumulative_paid|inr }}</strong>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:800;color:var(--primary);font-size:0.95rem;">{{ inst.amount|inr }}</div>
+          <div style="font-size:0.75rem;color:var(--danger);font-weight:700;">Bal: {{ inst.balance|inr }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div id="scheduleExpandFooter" style="text-align:center;padding:12px 0 4px 0;">
+    <button type="button" class="btn btn-outline btn-sm" onclick="toggleFullSchedule()" style="padding:6px 16px;">
+      <span class="material-symbols-outlined" style="font-size:16px;">unfold_more</span>
+      <span id="footerToggleText">Show All {{ installment_count }} Installments</span>
+    </button>
+  </div>
+</div>
+
+<script>
+let scheduleExpanded = false;
+
+function setGross(amt) {
+  document.getElementById('inq_gross').value = amt;
+  document.querySelectorAll('.preset-chip').forEach(btn => {
+    btn.classList.remove('btn-primary');
+    if (btn.innerText.replace(/[₹,]/g, '') == amt) {
+      btn.classList.add('btn-primary');
+    }
+  });
+  // Update net disbursed based on current rate or 80% default
+  const rate = parseFloat(document.getElementById('inq_rate').value) || 20;
+  const net = Math.round(amt - (amt * rate / 100));
+  document.getElementById('inq_net').value = net;
+  recalcLive();
+}
+
+function setDisbursedPct(pct) {
+  const gross = parseFloat(document.getElementById('inq_gross').value) || 0;
+  const net = Math.round((gross * pct) / 100);
+  document.getElementById('inq_net').value = net;
+  document.getElementById('inq_rate').value = (100 - pct).toFixed(1);
+  recalcLive();
+}
+
+function onGrossChange() {
+  const gross = parseFloat(document.getElementById('inq_gross').value) || 0;
+  const rate = parseFloat(document.getElementById('inq_rate').value) || 20;
+  const net = Math.round(gross - (gross * rate / 100));
+  document.getElementById('inq_net').value = net;
+  recalcLive();
+}
+
+function onNetChange() {
+  const gross = parseFloat(document.getElementById('inq_gross').value) || 0;
+  const net = parseFloat(document.getElementById('inq_net').value) || 0;
+  if (gross > 0) {
+    const upfront = Math.max(0, gross - net);
+    const rate = ((upfront / gross) * 100).toFixed(1);
+    document.getElementById('inq_rate').value = rate;
+  }
+  recalcLive();
+}
+
+function handleFreqChange() {
+  const freq = document.getElementById('inq_freq').value;
+  const countInput = document.getElementById('inq_count');
+  if (freq === 'daily') {
+    countInput.value = 100;
+  } else if (freq === 'weekly') {
+    countInput.value = 10;
+  } else if (freq === 'monthly') {
+    countInput.value = 5;
+  }
+  recalcLive();
+}
+
+function formatINR(val) {
+  return '₹' + Math.round(val).toLocaleString('en-IN');
+}
+
+function recalcLive() {
+  const gross = parseFloat(document.getElementById('inq_gross').value) || 0;
+  const net = parseFloat(document.getElementById('inq_net').value) || 0;
+  const count = parseInt(document.getElementById('inq_count').value) || 1;
+  const freq = document.getElementById('inq_freq').value || 'daily';
+  const startDateStr = document.getElementById('inq_start_date').value;
+
+  const upfront = Math.max(0, Math.round(gross - net));
+  const rate = gross > 0 ? ((upfront / gross) * 100).toFixed(1) : '0.0';
+  const emi = count > 0 ? Math.round(gross / count) : 0;
+
+  // Update Top 4 Metric Cards (Single ₹ sign formatted by formatINR)
+  document.getElementById('disp_gross').innerText = formatINR(gross);
+  document.getElementById('disp_net').innerText = formatINR(net);
+  document.getElementById('disp_interest').innerText = formatINR(upfront);
+  document.getElementById('disp_interest_deducted').innerText = formatINR(upfront);
+  document.getElementById('disp_rate_pct').innerText = rate;
+  document.getElementById('disp_stat_rate_pct').innerText = rate;
+  document.getElementById('disp_emi').innerText = formatINR(emi);
+  document.getElementById('disp_total_repay').innerText = formatINR(gross);
+  document.getElementById('disp_freq_count').innerText = `${count} ${freq.charAt(0).toUpperCase() + freq.slice(1)} Installments`;
+  document.getElementById('disp_tenure').innerText = `${count} ${freq.charAt(0).toUpperCase() + freq.slice(1)}s`;
+
+  // Update Action Buttons links dynamically with both gross and net
+  const issueBtn = document.getElementById('issueLoanBtn');
+  if (issueBtn) {
+    issueBtn.href = `/loans/create/?gross=${gross}&net=${net}&freq=${freq}&count=${count}`;
+  }
+  const pdfBtn = document.getElementById('downloadPdfBtn');
+  if (pdfBtn) {
+    pdfBtn.href = `/inquiries/pdf/?gross=${gross}&net=${net}&freq=${freq}&count=${count}&start_date=${startDateStr}`;
+  }
+}
+
+function toggleFullSchedule() {
+  scheduleExpanded = !scheduleExpanded;
+  const extras = document.querySelectorAll('.schedule-extra');
+  extras.forEach(el => {
+    if (scheduleExpanded) {
+      el.style.display = el.classList.contains('schedule-row-card') ? 'flex' : 'table-row';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+
+  const btnText = document.getElementById('toggleScheduleText');
+  const footerText = document.getElementById('footerToggleText');
+  const totalCount = document.getElementById('inq_count').value;
+
+  if (scheduleExpanded) {
+    btnText.innerText = 'Show Less';
+    footerText.innerText = 'Show Less';
+  } else {
+    btnText.innerText = 'Show All Installments';
+    footerText.innerText = `Show All ${totalCount} Installments`;
+  }
+}
+</script>
+{% endblock %}

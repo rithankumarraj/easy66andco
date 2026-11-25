@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_whatsapp">WhatsApp Settings</span>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:850px;margin:0 auto;">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title">Meta WhatsApp Business Cloud API — Sandbox Settings</h3>
+      <div class="card-subtitle">Configure credentials for Meta's Graph API Sandbox to send test messages directly.</div>
+    </div>
+    
+    <a href="{% url 'whatsapp_messenger' %}" class="btn btn-outline btn-sm">
+      <span class="material-symbols-outlined">chat</span> Open Messenger
+    </a>
+  </div>
+
+  <form method="POST" style="margin-top:20px;">
+    {% csrf_token %}
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin-bottom:20px;font-size:13px;color:#166534;">
+      <strong>📌 How to get Meta WhatsApp Sandbox credentials:</strong>
+      <ol style="margin:8px 0 0 18px;padding:0;line-height:1.6;">
+        <li>Go to <a href="https://developers.facebook.com" target="_blank" style="color:#0f766e;font-weight:700;">developers.facebook.com</a> and sign in.</li>
+        <li>Create or select your App &rarr; Add <strong>WhatsApp</strong> product.</li>
+        <li>Under <strong>WhatsApp &rarr; API Setup</strong>, you will see a temporary <strong>Access Token</strong> and <strong>Phone number ID</strong>.</li>
+        <li>In the <strong>To</strong> field in Meta Console, add and verify your personal phone number using an OTP to whitelist it in Sandbox mode.</li>
+        <li>Paste your <strong>Phone Number ID</strong>, <strong>Access Token</strong>, and verified recipient number below.</li>
+      </ol>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+        Meta Phone Number ID <span style="color:red;">*</span>
+      </label>
+      <input type="text" name="phone_number_id" class="form-control" value="{{ config.phone_number_id }}" placeholder="e.g. 104523987654321">
+      <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">
+        Found on the Meta WhatsApp API Setup page under "Phone number ID".
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+        Meta Graph API Access Token (Bearer Token) <span style="color:red;">*</span>
+      </label>
+      <textarea name="access_token" class="form-control" rows="3" placeholder="EAABw..." style="font-family:monospace;font-size:12px;">{{ config.access_token }}</textarea>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">
+        Temporary 24-hour test token or permanent System User token from Meta Business Manager.
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+        WhatsApp Business Account ID (WABA ID)
+      </label>
+      <input type="text" name="business_account_id" class="form-control" value="{{ config.business_account_id }}" placeholder="e.g. 109876543210123">
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:6px;display:block;">
+        Sandbox Verified Test Recipient Number
+      </label>
+      <input type="text" name="test_recipient_number" class="form-control" value="{{ config.test_recipient_number }}" placeholder="e.g. 919876543210">
+      <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">
+        The recipient phone number you verified with OTP in Meta's Developer Console Sandbox.
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:24px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" name="is_enabled" value="1" {% if config.is_enabled %}checked{% endif %} style="width:18px;height:18px;accent-color:var(--teal);">
+        <span style="font-weight:600;font-size:13.5px;color:var(--text-dark);">Enable Meta Cloud API Dispatch</span>
+      </label>
+    </div>
+
+    <div style="display:flex;gap:12px;">
+      <button type="submit" class="btn btn-primary" style="height:42px;padding:0 24px;font-weight:700;">
+        Save Configuration
+      </button>
+      <a href="{% url 'whatsapp_messenger' %}" class="btn btn-outline" style="height:42px;line-height:42px;padding:0 20px;">
+        Cancel
+      </a>
+    </div>
+  </form>
+
+  <hr style="margin:28px 0 20px 0;border:none;border-top:1px solid var(--border-light);">
+
+  <!-- Official Meta cURL Example Reference -->
+  <div>
+    <h4 style="margin:0 0 8px 0;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text-dark);">
+      <span class="material-symbols-outlined" style="font-size:18px;color:#0f9d58;">terminal</span>
+      Official Meta cURL Command (<a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform#example-sending-a-text-message-using-curl" target="_blank" style="color:var(--teal);text-decoration:none;">Meta Documentation Reference</a>)
+    </h4>
+    <p style="font-size:12.5px;color:var(--text-muted);margin:0 0 10px 0;">
+      You can run this standard cURL command in PowerShell, Windows Command Prompt, or Linux/macOS terminal to verify your access token and phone number ID directly with Meta:
+    </p>
+    <pre style="background:#0f172a;color:#38bdf8;padding:12px 14px;border-radius:8px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;line-height:1.5;">{{ curl_test }}</pre>
+  </div>
+</div>
+{% endblock %}

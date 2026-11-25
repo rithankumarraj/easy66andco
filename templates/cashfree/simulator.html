@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}Cashfree Mandate Checkout (Sandbox Simulator){% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:540px;margin:20px auto;border:2px solid #818cf8;box-shadow:0 10px 25px -5px rgba(99,102,241,0.15);">
+  <!-- Cashfree Simulator Header -->
+  <div style="background:linear-gradient(135deg, #1e1b4b, #312e81);color:#ffffff;padding:16px 20px;border-radius:calc(var(--radius-lg) - 2px) calc(var(--radius-lg) - 2px) 0 0;margin:-16px -16px 16px -16px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="material-symbols-outlined" style="color:#a5b4fc;">bolt</span>
+        <strong style="font-size:1.05rem;letter-spacing:0.5px;">CASHFREE PAYMENTS</strong>
+      </div>
+      <div style="font-size:0.75rem;color:#c7d2fe;margin-top:2px;">Recurring Subscription Mandate · Sandbox</div>
+    </div>
+    <span class="badge" style="background:#4338ca;color:#ffffff;font-size:0.7rem;">TEST ENVIRONMENT</span>
+  </div>
+
+  <!-- Loan & Mandate Details -->
+  <div style="background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px dashed var(--border);padding-bottom:10px;margin-bottom:10px;">
+      <div>
+        <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Borrower / Customer</span>
+        <div style="font-weight:800;font-size:1.1rem;color:var(--primary);">{{ loan.customer.name }}</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);">{{ loan.customer.phone }} · {{ loan.loan_id }}</div>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;">Auto-Debit Amount</span>
+        <div style="font-weight:900;font-size:1.35rem;color:var(--teal);">{{ loan.installment_amount|inr }}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">per {{ loan.frequency }}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.8rem;">
+      <div>Subscription ID: <code style="font-size:0.75rem;">{{ sub_id }}</code></div>
+      <div>Total Cycles: <strong>{{ loan.installment_count }} installments</strong></div>
+      <div>Max Mandate Cap: <strong>{{ loan.gross_principal|inr }}</strong></div>
+      <div>Mandate Status: <span class="badge badge-{{ loan.cashfree_sub_status|lower }}">{{ loan.cashfree_sub_status|default:"INITIALIZED" }}</span></div>
+    </div>
+  </div>
+
+  <!-- Mandate Authorization Method Simulation -->
+  <div style="margin-bottom:16px;">
+    <label style="font-size:0.82rem;font-weight:700;color:var(--primary);margin-bottom:8px;display:block;">
+      Select Recurring Authorization Mode (Sandbox Simulation):
+    </label>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label style="display:flex;align-items:center;gap:10px;background:#ffffff;border:1.5px solid #6366f1;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;">
+        <input type="radio" name="pay_mode" checked style="accent-color:#6366f1;">
+        <div>
+          <strong>UPI AutoPay (Google Pay / PhonePe / Paytm / BHIM)</strong>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Instant approval via UPI e-Mandate notification</div>
+        </div>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:10px;background:#ffffff;border:1px solid var(--border);padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;">
+        <input type="radio" name="pay_mode" style="accent-color:#6366f1;">
+        <div>
+          <strong>eNACH / NetBanking Auto-Debit</strong>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Direct bank account mandate approval</div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    {% if loan.cashfree_sub_status != 'ACTIVE' %}
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="authorize">
+        <button type="submit" class="btn btn-teal" style="width:100%;justify-content:center;padding:11px;font-size:0.95rem;">
+          <span class="material-symbols-outlined">verified_user</span>
+          Authorize Mandate (Simulate Customer Approval)
+        </button>
+      </form>
+    {% else %}
+      <div class="alert alert-success" style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">check_circle</span>
+        <span>This Mandate is <strong>ACTIVE</strong>! Installments can now be auto-debited automatically.</span>
+      </div>
+
+      {% if pending_inst %}
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="debit_next">
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;font-size:0.9rem;">
+            <span class="material-symbols-outlined">payments</span>
+            Simulate Next Recurring Debit (Inst #{{ pending_inst.num }} — {{ pending_inst.amount|inr }})
+          </button>
+        </form>
+      {% endif %}
+    {% endif %}
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+      <a href="{% url 'loan_detail' loan.pk %}" class="btn btn-outline btn-sm">
+        ← Return to Loan Details
+      </a>
+      <span style="font-size:0.72rem;color:var(--text-muted);">Cashfree Test Environment</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

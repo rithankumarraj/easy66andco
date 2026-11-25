@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block page_title %}<span data-i18n="{% if editing %}btn_edit{% else %}btn_add_staff{% endif %}">{{ title }}</span>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:560px;margin:0 auto;">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title" data-i18n="{% if editing %}btn_edit{% else %}btn_add_staff{% endif %}">{{ title }}</h3>
+      <div class="card-subtitle">Create or modify employee login credentials and profile details.</div>
+    </div>
+    <a href="{% url 'staff_list' %}" class="btn btn-outline btn-sm" data-i18n="btn_back">Back to Staff List</a>
+  </div>
+
+  <form method="POST" style="display:flex;flex-direction:column;gap:12px;margin-top:6px;">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label data-i18n="th_customer">Full Name *</label>
+      {{ form.name }}
+      {{ form.name.errors }}
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label data-i18n="th_phone">Phone Number</label>
+        {{ form.phone }}
+        {{ form.phone.errors }}
+      </div>
+      <div class="form-group">
+        <label data-i18n="lbl_email">Email Address</label>
+        {{ form.email }}
+        {{ form.email.errors }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Username *</label>
+      {{ form.username }}
+      {{ form.username.errors }}
+    </div>
+
+    <div class="form-group">
+      <label>Password {% if editing %}(Leave empty to keep unchanged){% else %}*{% endif %}</label>
+      {{ form.password }}
+      {{ form.password.errors }}
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);">
+      <a href="{% url 'staff_list' %}" class="btn btn-outline" data-i18n="btn_cancel">Cancel</a>
+      <button type="submit" class="btn btn-teal">
+        <span class="material-symbols-outlined">save</span>
+        <span data-i18n="btn_save_staff">Save Staff</span>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_loans">Loans</span>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <!-- Card Header: Title on left, Create Loan button in the right corner -->
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title"><span data-i18n="nav_loans">Loans</span> ({{ loans|length }})</h3>
+      <div class="card-subtitle">All active, completed, and defaulted Thavanai loan accounts.</div>
+    </div>
+    <div>
+      <a href="{% url 'loan_create' %}" class="btn btn-teal btn-corner">
+        <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+        <span data-i18n="btn_create_loan">Create Loan</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <form method="GET" class="filter-bar">
+    <div class="form-group" style="flex:1;min-width:180px;">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, loan ID..."
+        data-i18n-ph="ph_search_global" class="form-control">
+    </div>
+    <div class="form-group" style="min-width:120px;">
+      <select name="freq" class="form-control" onchange="this.form.submit()">
+        <option value="">All Frequencies</option>
+        <option value="daily" {% if freq == 'daily' %}selected{% endif %}>Daily</option>
+        <option value="weekly" {% if freq == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if freq == 'monthly' %}selected{% endif %}>Monthly</option>
+      </select>
+    </div>
+    <div class="form-group" style="min-width:120px;">
+      <select name="status" class="form-control" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+        <option value="defaulted" {% if status_filter == 'defaulted' %}selected{% endif %}>Defaulted</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm" data-i18n="btn_filter">Filter</button>
+    {% if q or freq or status_filter %}
+    <a href="{% url 'loan_list' %}" class="btn btn-outline btn-sm">Reset</a>
+    {% endif %}
+  </form>
+
+  {% if loans %}
+  <!-- 1. Desktop Table View -->
+  <div class="desktop-table-view">
+    <div class="table-responsive">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th data-i18n="th_loan_id">Loan ID</th>
+            <th data-i18n="th_customer">Customer</th>
+            <th data-i18n="th_phone">Phone</th>
+            <th data-i18n="th_gross">Gross</th>
+            <th data-i18n="th_net_cash">Cash Given</th>
+            <th data-i18n="th_frequency">Frequency</th>
+            <th data-i18n="th_per_inst">Per Inst</th>
+            <th data-i18n="th_installments">Installments</th>
+            <th data-i18n="th_staff">Staff</th>
+            <th data-i18n="th_status">Status</th>
+            <th style="text-align:right;" data-i18n="th_actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in loans %}
+          <tr>
+            <td><strong style="color:var(--primary);">{{ l.loan_id }}</strong></td>
+            <td>
+              <a href="{% url 'customer_detail' l.customer.pk %}"
+                style="color:inherit;font-weight:700;text-decoration:none;">
+                {{ l.customer.name }}
+              </a>
+            </td>
+            <td>{{ l.customer.phone }}</td>
+            <td><strong>{{ l.gross_principal|inr }}</strong></td>
+            <td style="color:var(--teal);font-weight:700;">{{ l.net_proceeds|inr }}</td>
+            <td>
+              <span class="badge" style="background:#f1f5f9;color:var(--primary);">
+                {{ l.frequency|title }}
+              </span>
+            </td>
+            <td>{{ l.installment_amount|inr }}</td>
+            <td>
+              <span style="font-weight:600;">{{ l.paid_count }}</span> / {{ l.installment_count }}
+              {% if l.overdue_count > 0 %}
+              <span style="color:var(--danger);font-size:0.72rem;font-weight:700;">({{ l.overdue_count }} late)</span>
+              {% endif %}
+            </td>
+            <td>{{ l.assigned_staff.get_full_name|default:l.assigned_staff|default:"—" }}</td>
+            <td><span class="badge badge-{{ l.status }}">{{ l.status|title }}</span></td>
+            <td style="text-align:right;">
+              <a href="{% url 'loan_detail' l.pk %}" class="btn-icon" title="View Details"><span
+                  class="material-symbols-outlined">visibility</span></a>
+              <a href="{% url 'loan_edit' l.pk %}" class="btn-icon" title="Edit"><span
+                  class="material-symbols-outlined">edit</span></a>
+              <a href="{% url 'loan_delete' l.pk %}" class="btn-icon" title="Delete"
+                onclick="return confirm('Delete loan {{ l.loan_id }}?')"><span class="material-symbols-outlined"
+                  style="color:var(--danger)">delete</span></a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. Mobile Card View -->
+  <div class="mobile-card-view">
+    {% for l in loans %}
+    <div class="mobile-customer-card">
+      <div class="m-card-header">
+        <div class="m-cust-name-id">
+          <span class="m-cust-id">{{ l.loan_id }}</span>
+          <strong class="m-cust-name">{{ l.customer.name }}</strong>
+        </div>
+        <span class="badge badge-{{ l.status }}">{{ l.status|title }}</span>
+      </div>
+
+      <div class="m-card-body">
+        <div class="m-info-line">
+          <span class="material-symbols-outlined" style="font-size:15px;">call</span>
+          <span>{{ l.customer.phone }}</span>
+          <span class="m-freq-badge">{{ l.frequency|title }}</span>
+        </div>
+
+        <div class="m-stats-row">
+          <div class="m-stat-item">
+            <span class="m-stat-lbl" data-i18n="th_gross">Gross</span>
+            <span class="m-stat-val">{{ l.gross_principal|inr }}</span>
+          </div>
+          <div class="m-stat-item">
+            <span class="m-stat-lbl" data-i18n="th_paid">Paid</span>
+            <span class="m-stat-val" style="color:var(--teal)">{{ l.paid_total|inr }}</span>
+          </div>
+          <div class="m-stat-item">
+            <span class="m-stat-lbl" data-i18n="th_balance">Balance</span>
+            <span class="m-stat-val" style="color:var(--danger)">{{ l.outstanding|inr }}</span>
+          </div>
+        </div>
+
+        <div class="m-inst-progress">
+          <span>Installments: <strong>{{ l.paid_count }}</strong> / {{ l.installment_count }} ({{
+            l.installment_amount|inr }})</span>
+          {% if l.overdue_count > 0 %}
+          <span style="color:var(--danger);font-weight:700;">{{ l.overdue_count }} late</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="m-card-footer">
+        <a href="{% url 'loan_detail' l.pk %}" class="btn btn-outline m-view-all-btn">
+          <span data-i18n="btn_view_all_details">Click to view all details</span>
+          <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div style="padding:40px;text-align:center;color:var(--text-muted);">
+    <span class="material-symbols-outlined" style="font-size:40px;opacity:0.4;">account_balance_wallet</span>
+    <p style="margin-top:6px;font-size:0.86rem;">No loans created yet. Click "Create Loan" to issue a loan.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

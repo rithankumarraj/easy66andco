@@ -1,0 +1,148 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Easy 66 & Co{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-header">
+        <img src="{% static 'assets/logo.jpg' %}" alt="66 Logo" class="brand-logo-img">
+        <div>
+          <div class="brand-title" data-i18n="brand_title">Easy 66 & Co</div>
+          <span class="brand-subtitle" data-i18n="thavanai_concept">Thavanai Finance</span>
+        </div>
+      </div>
+
+      <ul class="nav-list">
+        <li>
+          <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span data-i18n="nav_dashboard">Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'customer_list' %}" class="nav-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}">
+            <span class="material-symbols-outlined">group</span>
+            <span data-i18n="nav_customers">Customers</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'loan_list' %}" class="nav-link {% if request.resolver_match.url_name == 'loan_list' or request.resolver_match.url_name == 'loan_create' or request.resolver_match.url_name == 'loan_detail' %}active{% endif %}">
+            <span class="material-symbols-outlined">account_balance_wallet</span>
+            <span data-i18n="nav_loans">Loans</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'loan_request_list' %}" class="nav-link {% if 'loan_request' in request.resolver_match.url_name %}active{% endif %}">
+            <span class="material-symbols-outlined">assignment</span>
+            <span data-i18n="nav_loan_requests">Loan Requests</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'collection_list' %}" class="nav-link {% if 'collection' in request.resolver_match.url_name %}active{% endif %}">
+            <span class="material-symbols-outlined">payments</span>
+            <span data-i18n="nav_collections">Collections</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'whatsapp_messenger' %}" class="nav-link {% if 'whatsapp' in request.resolver_match.url_name %}active{% endif %}">
+            <span class="material-symbols-outlined">chat</span>
+            <span data-i18n="nav_whatsapp">WhatsApp</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'inquiries' %}" class="nav-link {% if request.resolver_match.url_name == 'inquiries' %}active{% endif %}">
+            <span class="material-symbols-outlined">search_insights</span>
+            <span data-i18n="nav_inquiries">Inquiries</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+            <span class="material-symbols-outlined">summarize</span>
+            <span data-i18n="nav_reports">Reports</span>
+          </a>
+        </li>
+
+        {% if request.user.profile.role == 'admin' %}
+        <li>
+          <a href="{% url 'staff_list' %}" class="nav-link {% if 'staff' in request.resolver_match.url_name %}active{% endif %}">
+            <span class="material-symbols-outlined">badge</span>
+            <span data-i18n="nav_staff">Staff</span>
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'cashfree_settings' %}" class="nav-link {% if 'cashfree' in request.resolver_match.url_name %}active{% endif %}">
+            <span class="material-symbols-outlined">bolt</span>
+            <span data-i18n="nav_cashfree">Cashfree AutoPay</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+
+      <div class="sidebar-footer">
+        <a href="{% url 'logout' %}" class="nav-link">
+          <span class="material-symbols-outlined">logout</span>
+          <span data-i18n="nav_logout">Logout</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <header class="top-header">
+        <div class="header-left-wrap">
+          <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="Toggle menu">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+          <h2>{% block page_title %}{% endblock %}</h2>
+        </div>
+
+        <form action="{% url 'customer_list' %}" method="GET" class="header-search">
+          <span class="material-symbols-outlined" style="color:var(--text-muted);font-size:18px;">search</span>
+          <input type="text" name="q" placeholder="Search customer, phone, ID..." data-i18n-ph="ph_search_global" value="{{ request.GET.q }}">
+        </form>
+
+        <div class="header-right">
+          <!-- Clean Language Toggle -->
+          <div class="lang-switcher" id="langToggleBtn" onclick="toggleLanguage()" title="Switch Language">
+            <span class="lang-pill">தமிழ்</span>
+            <span class="lang-pill active">EN</span>
+          </div>
+
+          <div class="user-badge" title="{{ request.user.get_full_name|default:request.user.username }} ({{ request.user.profile.role }})">
+            <div class="user-avatar">{{ request.user.first_name|default:request.user.username|make_list|first|upper }}</div>
+            <div class="user-details-text">
+              <div style="font-weight:700;font-size:0.84rem;">{{ request.user.get_full_name|default:request.user.username }}</div>
+              <span class="role-pill">{{ request.user.profile.role }}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {% if messages %}
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="content-body">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'js/lang.js' %}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

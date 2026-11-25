@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block page_title %}<span data-i18n="{% if editing %}btn_edit{% else %}btn_add_customer{% endif %}">{{ title }}</span>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:640px;margin:0 auto;">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title" data-i18n="{% if editing %}btn_edit{% else %}btn_add_customer{% endif %}">{{ title }}</h3>
+      <div class="card-subtitle">Customer identity and contact information.</div>
+    </div>
+    <a href="{% url 'customer_list' %}" class="btn btn-outline btn-sm" data-i18n="btn_back">Back</a>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:12px;margin-top:6px;">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label data-i18n="lbl_cust_name">Customer Full Name *</label>
+      {{ form.name }}
+      {{ form.name.errors }}
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label data-i18n="lbl_phone">Phone Number *</label>
+        {{ form.phone }}
+        {{ form.phone.errors }}
+      </div>
+      <div class="form-group">
+        <label data-i18n="lbl_email">Email Address</label>
+        {{ form.email }}
+        {{ form.email.errors }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="lbl_address">Address</label>
+      {{ form.address }}
+      {{ form.address.errors }}
+    </div>
+
+    <!-- Mandatory KYC Documents -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:6px;">
+      <h4 style="font-size:14px;font-weight:700;color:#0f172a;margin:0 0 12px 0;display:flex;align-items:center;gap:6px;">
+        <span class="material-symbols-outlined" style="font-size:18px;color:var(--teal)">badge</span>
+        KYC Documents (Mandatory for all loans)
+      </h4>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-weight:600;font-size:12.5px;color:#334155;">
+          • PAN Card (கட்டாயம்)
+          {% if customer.pan_card_doc %}
+            <a href="{{ customer.pan_card_doc.url }}" target="_blank" style="color:var(--teal);margin-left:8px;font-size:11.5px;text-decoration:none;">
+              [View Current Document]
+            </a>
+          {% endif %}
+        </label>
+        {{ form.pan_card_doc }}
+        {{ form.pan_card_doc.errors }}
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="font-weight:600;font-size:12.5px;color:#334155;">
+          • Aadhaar Card (கட்டாயம்)
+          {% if customer.aadhaar_card_doc %}
+            <a href="{{ customer.aadhaar_card_doc.url }}" target="_blank" style="color:var(--teal);margin-left:8px;font-size:11.5px;text-decoration:none;">
+              [View Current Document]
+            </a>
+          {% endif %}
+        </label>
+        {{ form.aadhaar_card_doc }}
+        {{ form.aadhaar_card_doc.errors }}
+      </div>
+
+      <div class="form-group" style="margin-bottom:4px;">
+        <label style="font-weight:600;font-size:12.5px;color:#334155;">
+          • Recent Utility Bill (Electricity, water, or piped gas within last 2–3 months) (கட்டாயம்)
+          {% if customer.utility_bill_doc %}
+            <a href="{{ customer.utility_bill_doc.url }}" target="_blank" style="color:var(--teal);margin-left:8px;font-size:11.5px;text-decoration:none;">
+              [View Current Document]
+            </a>
+          {% endif %}
+        </label>
+        {{ form.utility_bill_doc }}
+        {{ form.utility_bill_doc.errors }}
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-light);">
+      <a href="{% url 'customer_list' %}" class="btn btn-outline" data-i18n="btn_cancel">Cancel</a>
+      {% if not editing %}
+        <button type="submit" name="save_and_loan" value="1" class="btn btn-primary">
+          <span class="material-symbols-outlined">add_circle</span>
+          Save & Issue Loan
+        </button>
+      {% endif %}
+      <button type="submit" class="btn btn-teal">
+        <span class="material-symbols-outlined">save</span>
+        <span data-i18n="btn_save">Save Customer</span>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Received — Easy 66 & Co</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 14px;
+    }
+    .success-card {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+      max-width: 580px;
+      width: 100%;
+      padding: 36px 28px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+    .success-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #dcfce7;
+      color: #16a34a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      font-size: 38px;
+    }
+    .ref-badge {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 6px 16px;
+      border-radius: 8px;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+      border: 1px dashed #cbd5e1;
+    }
+    .detail-summary {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px 20px;
+      text-align: left;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+    .detail-row .lbl {
+      color: #64748b;
+    }
+    .detail-row .val {
+      font-weight: 700;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+
+<div class="success-card">
+  <div class="success-icon">
+    <span class="material-symbols-outlined" style="font-size:42px;">check_circle</span>
+  </div>
+
+  <h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:0 0 6px 0;">Application Submitted!</h2>
+  <p style="color:#64748b;font-size:14px;margin:0 0 16px 0;">
+    Thank you, <strong>{{ loan_request.customer_name }}</strong>. Your Thavanai loan request has been recorded.
+  </p>
+
+  <div class="ref-badge">
+    REFERENCE ID: {{ loan_request.request_id }}
+  </div>
+
+  <div class="detail-summary">
+    <div class="detail-row">
+      <span class="lbl">Applicant Name:</span>
+      <span class="val">{{ loan_request.customer_name }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="lbl">Phone Number:</span>
+      <span class="val">{{ loan_request.phone }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="lbl">Requested Principal:</span>
+      <span class="val" style="color:#0d9488;">₹{{ loan_request.requested_amount|floatformat:0 }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="lbl">Repayment Frequency:</span>
+      <span class="val">{{ loan_request.get_frequency_display }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="lbl">Employment:</span>
+      <span class="val">{{ loan_request.get_employment_type_display }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="lbl">Status:</span>
+      <span class="val" style="color:#d97706;">Pending Verification</span>
+    </div>
+  </div>
+
+  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:14px;font-size:13px;color:#065f46;text-align:left;margin-bottom:24px;">
+    <strong>Next Step:</strong> Our team at Easy 66 & Co will review your documents and contact you on <strong>{{ loan_request.phone }}</strong> for quick loan disbursement.
+  </div>
+
+  <a href="https://wa.me/919871000001?text=Hello%20Easy%2066,%20I%20have%20submitted%20my%20loan%20application%20{{ loan_request.request_id }}." 
+     target="_blank" class="btn btn-teal" style="width:100%;height:46px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;">
+    <span class="material-symbols-outlined">chat</span>
+    Contact Us on WhatsApp
+  </a>
+</div>
+
+</body>
+</html>

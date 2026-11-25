@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block page_title %}<span data-i18n="nav_cashfree">Cashfree AutoPay Settings</span>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:800px;margin:0 auto;">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title" data-i18n="nav_cashfree">Cashfree Subscriptions & AutoPay Setup</h3>
+      <div class="card-subtitle">
+        Configure Cashfree Payment Gateway credentials for automated recurring collections (UPI AutoPay & eNACH).
+      </div>
+    </div>
+    <span class="badge {% if config.app_id and config.secret_key %}badge-active{% else %}badge-pending{% endif %}">
+      {% if config.app_id and config.secret_key %}Configured ({{ config.environment }}){% else %}Simulator Mode Active{% endif %}
+    </span>
+  </div>
+
+  <!-- Cashfree Dashboard Guide Banner -->
+  <div style="background:#f0fdf9;border:1.5px solid #a7f3d0;border-radius:var(--radius-md);padding:14px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start;">
+    <span class="material-symbols-outlined" style="color:var(--teal);font-size:26px;flex-shrink:0;">info</span>
+    <div style="font-size:0.84rem;color:var(--text-main);line-height:1.5;">
+      <strong>How to get your Cashfree Test Credentials:</strong>
+      <ol style="margin:4px 0 0 16px;padding:0;">
+        <li>Log in to your <strong>Cashfree Dashboard</strong> (currently in <strong>Test Environment</strong>).</li>
+        <li>Click <strong>Developers</strong> in the top header or navigate to <strong>API Keys</strong>.</li>
+        <li>Copy your <strong>App ID</strong> (Client ID) and <strong>Secret Key</strong>, and paste them below.</li>
+        <li>Set up Subscriptions mandate in 1 click for any borrower loan!</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Settings Form -->
+  <form method="POST" style="display:flex;flex-direction:column;gap:14px;">
+    {% csrf_token %}
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Environment *</label>
+        <select name="environment" class="form-control">
+          <option value="TEST" {% if config.environment == 'TEST' %}selected{% endif %}>Sandbox / Test Environment (Recommended)</option>
+          <option value="PROD" {% if config.environment == 'PROD' %}selected{% endif %}>Production / Live Environment</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Enable Cashfree Subscriptions</label>
+        <div style="display:flex;align-items:center;height:38px;gap:8px;">
+          <input type="checkbox" name="is_enabled" id="is_enabled" {% if config.is_enabled %}checked{% endif %} style="width:18px;height:18px;accent-color:var(--teal);">
+          <label for="is_enabled" style="margin:0;font-size:0.85rem;cursor:pointer;">Active for Thavanai Loans</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Cashfree App ID (Client ID) *</label>
+      <input type="text" name="app_id" value="{{ config.app_id }}" placeholder="e.g. TEST10384729..." class="form-control" style="font-family:monospace;">
+    </div>
+
+    <div class="form-group">
+      <label>Cashfree Secret Key *</label>
+      <input type="password" name="secret_key" value="{{ config.secret_key }}" placeholder="Enter your Cashfree API Secret Key" class="form-control" style="font-family:monospace;">
+    </div>
+
+    <div class="form-group">
+      <label>Cashfree Webhook Endpoint (For Instant Auto-Update)</label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" value="{{ webhook_url }}" class="form-control" readonly style="background:#f8fafc;font-family:monospace;font-size:0.8rem;" id="webhookUrlInput">
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyWebhookUrl()">
+          <span class="material-symbols-outlined" style="font-size:16px;">content_copy</span> Copy
+        </button>
+      </div>
+      <small style="color:var(--text-muted);font-size:0.75rem;">
+        Paste this URL in your <strong>Cashfree Dashboard ➔ Developers ➔ Webhooks</strong> to receive automatic payment callbacks.
+      </small>
+    </div>
+
+    <div class="form-group">
+      <label>Automatic Daily Auto-Debit</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" name="auto_debit" id="auto_debit" {% if config.auto_debit %}checked{% endif %} style="width:18px;height:18px;accent-color:var(--teal);">
+        <label for="auto_debit" style="margin:0;font-size:0.85rem;cursor:pointer;">Automatically collect installments when due date arrives</label>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-light);padding-top:14px;margin-top:6px;">
+      <button type="submit" name="test_conn" value="1" class="btn btn-outline" style="color:var(--primary);border-color:var(--primary);">
+        <span class="material-symbols-outlined" style="font-size:16px;">cable</span>
+        Test Cashfree API Connection
+      </button>
+
+      <div style="display:flex;gap:8px;">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline" data-i18n="btn_cancel">Cancel</a>
+        <button type="submit" class="btn btn-teal">
+          <span class="material-symbols-outlined" style="font-size:16px;">save</span>
+          Save Cashfree Settings
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+function copyWebhookUrl() {
+  const input = document.getElementById('webhookUrlInput');
+  input.select();
+  navigator.clipboard.writeText(input.value);
+  alert('Cashfree Webhook URL copied to clipboard!');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,523 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_collections">Collections</span>{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Google-style green checkbox */
+  .google-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 19px;
+    height: 19px;
+    border: 2px solid #5f6368;
+    border-radius: 3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    margin: 0;
+    vertical-align: middle;
+    position: relative;
+    transition: all 0.15s ease-in-out;
+    flex-shrink: 0;
+  }
+  .google-checkbox:hover {
+    border-color: #0f9d58;
+    background-color: #e6f4ea;
+  }
+  .google-checkbox:checked {
+    background-color: #0f9d58 !important;
+    border-color: #0f9d58 !important;
+  }
+  .google-checkbox:checked::after {
+    content: "";
+    display: block;
+    width: 5px;
+    height: 9px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+  }
+  .google-checkbox:focus {
+    outline: 2px solid rgba(15, 157, 88, 0.3);
+    outline-offset: 1px;
+  }
+  tr.row-selected {
+    background-color: #f1f8f5 !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Collection Summary Metrics -->
+<div class="stats-grid stats-grid-2x2" style="margin-bottom:12px;">
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_today_coll">Today's Collection</span>
+      <div class="stat-icon-wrap teal"><span class="material-symbols-outlined">today</span></div>
+    </div>
+    <div class="stat-val" style="color:var(--teal)">{{ today_total|inr }}</div>
+    <div class="stat-sub">{{ today_count }} payments received today</div>
+  </div>
+
+  <div class="stat-box" style="border:1.5px solid #fed7aa;background:#fffaf5;">
+    <div class="stat-top">
+      <span class="stat-lbl" style="color:#c2410c;font-weight:700;">Due for Collection</span>
+      <div class="stat-icon-wrap amber"><span class="material-symbols-outlined">pending_actions</span></div>
+    </div>
+    <div class="stat-val" style="color:#ea580c">{{ due_today_total|inr }}</div>
+    <div class="stat-sub">{{ due_today_count }} dues pending / today</div>
+  </div>
+
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_month_coll">This Month</span>
+      <div class="stat-icon-wrap blue"><span class="material-symbols-outlined">calendar_month</span></div>
+    </div>
+    <div class="stat-val">{{ month_total|inr }}</div>
+    <div class="stat-sub">Current calendar month</div>
+  </div>
+
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_all_time_coll">All-Time Collected</span>
+      <div class="stat-icon-wrap rose"><span class="material-symbols-outlined">savings</span></div>
+    </div>
+    <div class="stat-val" style="color:var(--primary)">{{ grand_total|inr }}</div>
+    <div class="stat-sub">Across all Thavanai loans</div>
+  </div>
+</div>
+
+<!-- Main Collections Container -->
+<div class="card">
+  <!-- Top Switch Tabs: Due Collections vs Collection History -->
+  <div style="display:flex;gap:8px;background:#f1f5f9;padding:4px;border-radius:var(--radius-sm);margin-bottom:12px;">
+    <a href="{% url 'collection_list' %}?tab=due" class="btn btn-sm {% if tab == 'due' %}btn-primary{% else %}btn-outline{% endif %}" style="flex:1;justify-content:center;border:none;">
+      <span class="material-symbols-outlined" style="font-size:16px;">receipt_long</span>
+      <span>Due for Collection ({{ due_list|length }})</span>
+    </a>
+    <a href="{% url 'collection_list' %}?tab=history" class="btn btn-sm {% if tab == 'history' %}btn-primary{% else %}btn-outline{% endif %}" style="flex:1;justify-content:center;border:none;">
+      <span class="material-symbols-outlined" style="font-size:16px;">history</span>
+      <span>Collection History ({{ collections|length }})</span>
+    </a>
+  </div>
+
+  {% if tab == 'due' %}
+    <!-- ══════════════ TAB 1: DUE FOR COLLECTION ══════════════ -->
+    <div class="card-header-row">
+      <div>
+        <h3 class="card-title">Pending & Due Collections</h3>
+        <div class="card-subtitle">
+          Showing {{ due_list|length }} pending installments ready for payment collection.
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Search for Due Borrowers -->
+    <form method="GET" class="filter-bar" style="margin-bottom:12px;">
+      <input type="hidden" name="tab" value="due">
+      <div class="form-group" style="flex:1;min-width:200px;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, loan ID..." data-i18n-ph="ph_search_global" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-teal btn-sm" style="height:36px;" data-i18n="btn_search">Search</button>
+      {% if q %}
+        <a href="{% url 'collection_list' %}?tab=due" class="btn btn-outline btn-sm">Reset</a>
+      {% endif %}
+    </form>
+
+    {% if due_list %}
+      <!-- 1. Desktop Table for Due Installments -->
+      <div class="desktop-table-view">
+        <div class="table-responsive">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_phone">Phone</th>
+                <th data-i18n="th_loan_id">Loan ID</th>
+                <th>Inst #</th>
+                <th data-i18n="th_due_date">Due Date</th>
+                <th data-i18n="th_amount">Amount Due</th>
+                <th data-i18n="th_status">Status</th>
+                <th data-i18n="th_staff">Assigned Staff</th>
+                <th style="text-align:right;" data-i18n="th_actions">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in due_list %}
+                <tr>
+                  <td>
+                    <a href="{% url 'customer_detail' d.loan.customer.pk %}" style="color:inherit;font-weight:700;text-decoration:none;">
+                      {{ d.loan.customer.name }}
+                    </a>
+                  </td>
+                  <td>{{ d.loan.customer.phone }}</td>
+                  <td><code>{{ d.loan.loan_id }}</code></td>
+                  <td><strong>#{{ d.num }}</strong> / {{ d.loan.installment_count }}</td>
+                  <td>
+                    {{ d.due_date|date:"d M Y" }}
+                    {% if d.status == 'overdue' %}
+                      <span style="color:var(--danger);font-size:0.7rem;font-weight:700;">(Late)</span>
+                    {% endif %}
+                  </td>
+                  <td style="color:var(--primary);font-weight:800;font-size:0.92rem;">{{ d.amount|inr }}</td>
+                  <td><span class="badge badge-{{ d.status }}">{{ d.status|title }}</span></td>
+                  <td>{{ d.loan.assigned_staff.get_full_name|default:d.loan.assigned_staff|default:"Unassigned" }}</td>
+                  <td style="text-align:right;">
+                    <a href="{% url 'collect_installment' d.loan.pk d.num %}?next={% url 'collection_list' %}?tab=due" class="btn btn-teal btn-sm" onclick="return confirm('Collect {{ d.amount|inr }} for Installment #{{ d.num }} ({{ d.loan.customer.name }})?')" data-i18n="btn_collect">
+                      Collect
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2. Mobile Cards for Due Installments -->
+      <div class="mobile-card-view">
+        {% for d in due_list %}
+          <div style="background:#ffffff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <strong style="color:var(--primary);font-size:0.92rem;">{{ d.loan.customer.name }}</strong>
+                <div style="font-size:0.75rem;color:var(--text-muted);">{{ d.loan.customer.phone }} · <code>{{ d.loan.loan_id }}</code></div>
+              </div>
+              <div style="text-align:right;">
+                <div style="color:var(--primary);font-weight:800;font-size:1.05rem;">{{ d.amount|inr }}</div>
+                <span class="badge badge-{{ d.status }}">#{{ d.num }} {{ d.status|title }}</span>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-light);padding-top:6px;font-size:0.75rem;color:var(--text-muted);">
+              <div>Due: <strong>{{ d.due_date|date:"d M Y" }}</strong></div>
+              <div>
+                <a href="{% url 'collect_installment' d.loan.pk d.num %}?next={% url 'collection_list' %}?tab=due" class="btn btn-teal btn-sm" onclick="return confirm('Collect {{ d.amount|inr }} for Installment #{{ d.num }} ({{ d.loan.customer.name }})?')" data-i18n="btn_collect">
+                  Collect Now
+                </a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div style="padding:40px;text-align:center;color:var(--text-muted);">
+        <span class="material-symbols-outlined" style="font-size:40px;opacity:0.4;">task_alt</span>
+        <p style="margin-top:6px;font-size:0.86rem;">No pending collections at this moment. All installments are up-to-date!</p>
+      </div>
+    {% endif %}
+
+  {% else %}
+    <!-- ══════════════ TAB 2: COLLECTION HISTORY LEDGER ══════════════ -->
+    <div class="card-header-row" style="flex-wrap:wrap;gap:10px;">
+      <div>
+        <h3 class="card-title" data-i18n="lbl_collection_records">Collection Records</h3>
+        <div class="card-subtitle">
+          Showing {{ collections|length }} collection receipts · Filtered Total: <strong style="color:var(--teal);">{{ filtered_total|inr }}</strong>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <!-- Initial Download as PDF Button -->
+        <button type="button" id="btnStartPdfSelection" class="btn btn-outline btn-sm btn-corner" onclick="enablePdfMode()">
+          <span class="material-symbols-outlined" style="font-size:16px;">picture_as_pdf</span> Download as PDF
+        </button>
+
+        <!-- PDF Selection Toolbar (revealed after clicking Download as PDF) -->
+        <div id="pdfSelectionToolbar" style="display:none;align-items:center;gap:8px;background:#e6f4ea;padding:4px 8px;border-radius:6px;border:1px solid #b7e1cd;">
+          <button type="button" id="toggleSelectBtn" class="btn btn-outline btn-sm" style="background:#fff;border-color:#0f9d58;color:#0f9d58;font-weight:700;display:inline-flex;align-items:center;gap:4px;" onclick="toggleSelectAll()">
+            <span class="material-symbols-outlined" id="toggleSelectIcon" style="font-size:16px;">select_all</span>
+            <span id="toggleSelectText">Select All</span>
+          </button>
+
+          <button type="button" id="btnDownloadSelectedPdf" class="btn btn-sm" style="background:#0f9d58;color:#fff;border:none;font-weight:700;display:inline-flex;align-items:center;gap:4px;" onclick="downloadSelectedPdf()">
+            <span class="material-symbols-outlined" style="font-size:16px;">picture_as_pdf</span>
+            Download as PDF (<span id="selectedCountBadge">0</span>)
+          </button>
+
+          <button type="button" class="btn btn-outline btn-sm" style="background:#fff;border:1px solid #dadce0;color:#5f6368;padding:4px 8px;display:inline-flex;align-items:center;" onclick="cancelPdfMode()" title="Cancel">
+            <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Bar with Presets & Date Pickers -->
+    <form method="GET" class="filter-bar" style="margin-bottom:12px;">
+      <input type="hidden" name="tab" value="history">
+
+      <!-- Date Presets -->
+      <div style="display:flex;gap:4px;flex-wrap:wrap;width:100%;margin-bottom:4px;">
+        <a href="{% url 'collection_list' %}?tab=history" class="btn btn-sm {% if not date_preset and not from_date %}btn-primary{% else %}btn-outline{% endif %}">All</a>
+        <a href="{% url 'collection_list' %}?tab=history&date_preset=today" class="btn btn-sm {% if date_preset == 'today' %}btn-primary{% else %}btn-outline{% endif %}">Today</a>
+        <a href="{% url 'collection_list' %}?tab=history&date_preset=yesterday" class="btn btn-sm {% if date_preset == 'yesterday' %}btn-primary{% else %}btn-outline{% endif %}">Yesterday</a>
+        <a href="{% url 'collection_list' %}?tab=history&date_preset=this_week" class="btn btn-sm {% if date_preset == 'this_week' %}btn-primary{% else %}btn-outline{% endif %}">This Week</a>
+        <a href="{% url 'collection_list' %}?tab=history&date_preset=this_month" class="btn btn-sm {% if date_preset == 'this_month' %}btn-primary{% else %}btn-outline{% endif %}">This Month</a>
+      </div>
+
+      <div class="form-group" style="flex:1;min-width:180px;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, loan ID..." data-i18n-ph="ph_search_global" class="form-control">
+      </div>
+
+      <div class="form-group" style="min-width:130px;">
+        <label data-i18n="lbl_from_date">From Date</label>
+        <input type="date" name="from" value="{{ from_date }}" class="form-control">
+      </div>
+
+      <div class="form-group" style="min-width:130px;">
+        <label data-i18n="lbl_to_date">To Date</label>
+        <input type="date" name="to" value="{{ to_date }}" class="form-control">
+      </div>
+
+      {% if request.user.profile.role == 'admin' %}
+        <div class="form-group" style="min-width:140px;">
+          <label data-i18n="th_staff">Staff</label>
+          <select name="staff" class="form-control">
+            <option value="">All Staff</option>
+            {% for st in staff_list %}
+              <option value="{{ st.pk }}" {% if staff_filter == st.pk|stringformat:"s" %}selected{% endif %}>
+                {{ st.get_full_name|default:st.username }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-teal btn-sm" style="height:36px;" data-i18n="btn_filter">
+        <span class="material-symbols-outlined">filter_list</span> Filter
+      </button>
+    </form>
+
+    {% if collections %}
+      <!-- 1. Desktop Table View -->
+      <div class="desktop-table-view">
+        <div class="table-responsive">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th class="pdf-select-col" style="display:none;width:44px;text-align:center;">
+                  <input type="checkbox" id="masterCheckbox" class="google-checkbox" onchange="handleMasterCheckbox(this)" title="Select / Deselect All">
+                </th>
+                <th data-i18n="th_paid_date">Paid Date</th>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_phone">Phone</th>
+                <th data-i18n="th_loan_id">Loan ID</th>
+                <th>Installment #</th>
+                <th data-i18n="th_amount">Collected Amount</th>
+                <th data-i18n="lbl_collected_by">Collected By</th>
+                <th style="text-align:right;" data-i18n="th_actions">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in collections %}
+                <tr id="coll-row-{{ c.id }}">
+                  <td class="pdf-select-col" style="display:none;text-align:center;vertical-align:middle;">
+                    <input type="checkbox" value="{{ c.id }}" class="google-checkbox row-checkbox" onchange="onRowCheckboxChange(this)">
+                  </td>
+                  <td><strong>{{ c.paid_date|date:"d M Y" }}</strong></td>
+                  <td>
+                    <a href="{% url 'customer_detail' c.loan.customer.pk %}" style="color:inherit;font-weight:700;text-decoration:none;">
+                      {{ c.loan.customer.name }}
+                    </a>
+                  </td>
+                  <td>{{ c.loan.customer.phone }}</td>
+                  <td><code>{{ c.loan.loan_id }}</code></td>
+                  <td>#{{ c.num }}</td>
+                  <td style="color:var(--teal);font-weight:800;">{{ c.paid_amount|inr }}</td>
+                  <td>
+                    {% if c.payment_method == 'cashfree_auto' %}
+                      <span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:700;">
+                        <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">bolt</span> AutoPay
+                      </span>
+                    {% else %}
+                      {{ c.collected_by.get_full_name|default:c.collected_by|default:"Cash Staff" }}
+                    {% endif %}
+                  </td>
+                  <td style="text-align:right;">
+                    <a href="{% url 'loan_detail' c.loan.pk %}" class="btn btn-outline btn-sm">
+                      View Loan
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 2. Mobile Cards View -->
+      <div class="mobile-card-view">
+        {% for c in collections %}
+          <div style="background:#ffffff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:flex-start;gap:10px;">
+            <div class="pdf-select-col-mobile" style="display:none;padding-top:4px;">
+              <input type="checkbox" value="{{ c.id }}" class="google-checkbox row-checkbox-mobile" onchange="onRowCheckboxChange(this)">
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                  <strong style="color:var(--primary);font-size:0.92rem;">{{ c.loan.customer.name }}</strong>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">{{ c.loan.customer.phone }} · <code>{{ c.loan.loan_id }}</code></div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="color:var(--teal);font-weight:800;font-size:1.05rem;">{{ c.paid_amount|inr }}</div>
+                  <span class="badge badge-paid">#{{ c.num }} Paid</span>
+                </div>
+              </div>
+
+              <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-light);padding-top:6px;font-size:0.75rem;color:var(--text-muted);">
+                <div>{{ c.paid_date|date:"d M Y" }}</div>
+                <div>By: <strong>{{ c.collected_by.get_full_name|default:c.collected_by|default:"Staff" }}</strong></div>
+                <a href="{% url 'loan_detail' c.loan.pk %}" style="color:var(--teal);font-weight:700;text-decoration:none;">View →</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div style="padding:40px;text-align:center;color:var(--text-muted);">
+        <span class="material-symbols-outlined" style="font-size:40px;opacity:0.4;">receipt_long</span>
+        <p style="margin-top:6px;font-size:0.86rem;">No collection records found for this period.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+<script>
+  function enablePdfMode() {
+    const startBtn = document.getElementById('btnStartPdfSelection');
+    const toolbar = document.getElementById('pdfSelectionToolbar');
+    if (startBtn) startBtn.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'inline-flex';
+
+    document.querySelectorAll('.pdf-select-col').forEach(el => el.style.display = 'table-cell');
+    document.querySelectorAll('.pdf-select-col-mobile').forEach(el => el.style.display = 'block');
+    updateSelectionUi();
+  }
+
+  function cancelPdfMode() {
+    const startBtn = document.getElementById('btnStartPdfSelection');
+    const toolbar = document.getElementById('pdfSelectionToolbar');
+    if (startBtn) startBtn.style.display = 'inline-flex';
+    if (toolbar) toolbar.style.display = 'none';
+
+    document.querySelectorAll('.pdf-select-col').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.pdf-select-col-mobile').forEach(el => el.style.display = 'none');
+
+    // Deselect all checkboxes
+    document.querySelectorAll('input.row-checkbox, input.row-checkbox-mobile').forEach(cb => { cb.checked = false; });
+    const master = document.getElementById('masterCheckbox');
+    if (master) master.checked = false;
+    document.querySelectorAll('tr.row-selected').forEach(tr => tr.classList.remove('row-selected'));
+    updateSelectionUi();
+  }
+
+  function toggleSelectAll(forceState) {
+    const desktopBoxes = document.querySelectorAll('input.row-checkbox');
+    const mobileBoxes = document.querySelectorAll('input.row-checkbox-mobile');
+    
+    let targetState;
+    if (typeof forceState === 'boolean') {
+      targetState = forceState;
+    } else {
+      // Toggle between Select All and Deselect All based on current state
+      const allChecked = desktopBoxes.length > 0 && Array.from(desktopBoxes).every(cb => cb.checked);
+      targetState = !allChecked;
+    }
+
+    desktopBoxes.forEach(cb => {
+      cb.checked = targetState;
+      const row = document.getElementById('coll-row-' + cb.value);
+      if (row) {
+        if (targetState) row.classList.add('row-selected');
+        else row.classList.remove('row-selected');
+      }
+    });
+
+    mobileBoxes.forEach(cb => { cb.checked = targetState; });
+
+    const master = document.getElementById('masterCheckbox');
+    if (master) master.checked = targetState;
+
+    updateSelectionUi();
+  }
+
+  function handleMasterCheckbox(master) {
+    toggleSelectAll(master.checked);
+  }
+
+  function onRowCheckboxChange(inputEl) {
+    if (inputEl) {
+      const val = inputEl.value;
+      const isChecked = inputEl.checked;
+      
+      // Sync desktop & mobile checkboxes for this ID
+      document.querySelectorAll(`input.row-checkbox[value="${val}"], input.row-checkbox-mobile[value="${val}"]`).forEach(cb => {
+        cb.checked = isChecked;
+      });
+
+      const row = document.getElementById('coll-row-' + val);
+      if (row) {
+        if (isChecked) row.classList.add('row-selected');
+        else row.classList.remove('row-selected');
+      }
+    }
+    updateSelectionUi();
+  }
+
+  function getSelectedIds() {
+    const checked = document.querySelectorAll('input.row-checkbox:checked, input.row-checkbox-mobile:checked');
+    return Array.from(new Set(Array.from(checked).map(cb => cb.value)));
+  }
+
+  function updateSelectionUi() {
+    const desktopBoxes = document.querySelectorAll('input.row-checkbox');
+    const checkedIds = getSelectedIds();
+    const count = checkedIds.length;
+
+    // Update count badge
+    const badge = document.getElementById('selectedCountBadge');
+    if (badge) badge.textContent = count;
+
+    // Update Single Toggle Button (Select All <-> Deselect All)
+    const toggleBtn = document.getElementById('toggleSelectBtn');
+    const toggleText = document.getElementById('toggleSelectText');
+    const toggleIcon = document.getElementById('toggleSelectIcon');
+    const master = document.getElementById('masterCheckbox');
+
+    const totalCount = desktopBoxes.length;
+    const isAllSelected = totalCount > 0 && count === totalCount;
+
+    if (master) {
+      master.checked = isAllSelected;
+      master.indeterminate = (count > 0 && count < totalCount);
+    }
+
+    if (toggleText) {
+      if (isAllSelected) {
+        toggleText.textContent = 'Deselect All';
+        if (toggleIcon) toggleIcon.textContent = 'deselect';
+      } else {
+        toggleText.textContent = 'Select All';
+        if (toggleIcon) toggleIcon.textContent = 'select_all';
+      }
+    }
+  }
+
+  function downloadSelectedPdf() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) {
+      alert('Please select at least one collection record to download as PDF.');
+      return;
+    }
+    const pdfUrl = "{% url 'report_pdf' %}?type=collection&ids=" + encodeURIComponent(ids.join(','));
+    window.location.href = pdfUrl;
+  }
+</script>
+{% endblock %}

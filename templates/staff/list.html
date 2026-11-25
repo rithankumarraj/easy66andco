@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block page_title %}<span data-i18n="nav_staff">Staff</span>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header-row">
+    <div>
+      <h3 class="card-title" data-i18n="nav_staff">Staff Members</h3>
+      <div class="card-subtitle">Manage employee access and review customer assignments.</div>
+    </div>
+    <div>
+      <a href="{% url 'staff_add' %}" class="btn btn-teal btn-corner">
+        <span class="material-symbols-outlined" style="font-size:16px;">person_add</span>
+        <span data-i18n="btn_add_staff">Add Staff</span>
+      </a>
+    </div>
+  </div>
+
+  {% if staff_data %}
+    <!-- 1. Desktop Table -->
+    <div class="desktop-table-view">
+      <div class="table-responsive">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th data-i18n="th_customer">Name</th>
+              <th>Username</th>
+              <th data-i18n="th_phone">Phone</th>
+              <th data-i18n="lbl_email">Email</th>
+              <th>Assigned Customers</th>
+              <th style="text-align:right;" data-i18n="th_actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in staff_data %}
+              <tr>
+                <td><strong style="color:var(--primary);">{{ item.user.get_full_name|default:item.user.username }}</strong></td>
+                <td><code>{{ item.user.username }}</code></td>
+                <td>{{ item.profile.phone|default:"—" }}</td>
+                <td>{{ item.user.email|default:"—" }}</td>
+                <td>
+                  <span class="badge badge-completed">{{ item.assigned }} customers</span>
+                </td>
+                <td style="text-align:right;">
+                  <a href="{% url 'inquiries' %}?staff={{ item.user.pk }}" class="btn-icon" title="View Assigned Customers">
+                    <span class="material-symbols-outlined">group</span>
+                  </a>
+                  <a href="{% url 'staff_edit' item.user.pk %}" class="btn-icon" title="Edit Staff">
+                    <span class="material-symbols-outlined">edit</span>
+                  </a>
+                  <a href="{% url 'staff_delete' item.user.pk %}" class="btn-icon" title="Delete Staff" onclick="return confirm('Delete staff {{ item.user.username }}?')">
+                    <span class="material-symbols-outlined" style="color:var(--danger)">delete</span>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. Mobile Cards -->
+    <div class="mobile-card-view">
+      {% for item in staff_data %}
+        <div class="mobile-customer-card">
+          <div class="m-card-header">
+            <div>
+              <strong class="m-cust-name">{{ item.user.get_full_name|default:item.user.username }}</strong>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+                <code>{{ item.user.username }}</code> · {{ item.profile.phone|default:"—" }}
+              </div>
+            </div>
+            <span class="badge badge-completed">{{ item.assigned }} customers</span>
+          </div>
+
+          <div class="m-card-footer" style="display:flex;gap:6px;justify-content:flex-end;">
+            <a href="{% url 'inquiries' %}?staff={{ item.user.pk }}" class="btn btn-outline btn-sm">
+              <span class="material-symbols-outlined" style="font-size:15px;">group</span> Customers
+            </a>
+            <a href="{% url 'staff_edit' item.user.pk %}" class="btn btn-outline btn-sm">
+              <span class="material-symbols-outlined" style="font-size:15px;">edit</span> Edit
+            </a>
+            <a href="{% url 'staff_delete' item.user.pk %}" class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="return confirm('Delete staff {{ item.user.username }}?')">
+              <span class="material-symbols-outlined" style="font-size:15px;">delete</span> Delete
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div style="padding:40px;text-align:center;color:var(--text-muted);">
+      <span class="material-symbols-outlined" style="font-size:38px;opacity:0.4;">badge</span>
+      <p style="margin-top:6px;font-size:0.86rem;">No employee staff created yet.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

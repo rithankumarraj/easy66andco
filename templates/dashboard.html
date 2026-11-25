@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load tracker_filters %}
+
+{% block page_title %}<span data-i18n="nav_dashboard">Dashboard</span>{% endblock %}
+
+{% block content %}
+<!-- Quick Thavanai Stats Cards -->
+<div class="stats-grid dashboard-stats-grid">
+  <!-- 1. Total Customers (Hidden in mobile view) -->
+  <div class="stat-box hide-on-mobile">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_total_customers">Total Customers</span>
+      <div class="stat-icon-wrap blue"><span class="material-symbols-outlined">group</span></div>
+    </div>
+    <div class="stat-val">{{ total_customers }}</div>
+    <div class="stat-sub">
+      <strong style="color:var(--teal)">{{ active_count }}</strong> <span data-i18n="lbl_active">Active</span> · 
+      <strong>{{ completed_count }}</strong> <span data-i18n="lbl_completed">Completed</span>
+    </div>
+  </div>
+
+  <!-- 2. Total Gross Principal (Row 1 full-width in mobile view) -->
+  <div class="stat-box dashboard-gross-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_total_gross">Total Gross Principal</span>
+      <div class="stat-icon-wrap teal"><span class="material-symbols-outlined">receipt_long</span></div>
+    </div>
+    <div class="stat-val">{{ total_gross|inr }}</div>
+    <div class="stat-sub">
+      <span data-i18n="lbl_total_disbursed">Cash Disbursed</span>: <strong>{{ total_disbursed|inr }}</strong>
+    </div>
+  </div>
+
+  <!-- 3. Upfront Interest (Row 2, Column 1 in mobile view) -->
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_upfront_interest">Upfront Interest</span>
+      <div class="stat-icon-wrap amber"><span class="material-symbols-outlined">percent</span></div>
+    </div>
+    <div class="stat-val" style="color:var(--warning)">{{ total_upfront_interest|inr }}</div>
+    <div class="stat-sub">
+      <span data-i18n="lbl_total_collected">Total Collected</span>: <strong style="color:var(--teal)">{{ collected|inr }}</strong>
+    </div>
+  </div>
+
+  <!-- 4. Pending / Overdue (Row 2, Column 2 in mobile view) -->
+  <div class="stat-box">
+    <div class="stat-top">
+      <span class="stat-lbl" data-i18n="lbl_pending_overdue">Pending / Overdue</span>
+      <div class="stat-icon-wrap rose"><span class="material-symbols-outlined">warning</span></div>
+    </div>
+    <div class="stat-val" style="color:var(--danger)">{{ pending|inr }}</div>
+    <div class="stat-sub">
+      <span data-i18n="lbl_overdue">Overdue</span>: <strong style="color:var(--danger)">{{ overdue|inr }}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="grid-cols-2">
+  <div class="card">
+    <div class="card-header-row">
+      <h3 class="card-title" data-i18n="sec_collection_analytics">Collection Analytics (Last 6 Months)</h3>
+    </div>
+    <div class="chart-box">
+      <canvas id="collectionChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header-row">
+      <h3 class="card-title" data-i18n="sec_loan_status">Loan Status Breakdown</h3>
+    </div>
+    <div class="chart-box">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Collection & Recent Tables -->
+<div class="grid-cols-2">
+  <!-- Upcoming Installments -->
+  <div class="card">
+    <div class="card-header-row">
+      <h3 class="card-title" data-i18n="sec_upcoming_collections">Upcoming Collections (Next 7 Days)</h3>
+      <a href="{% url 'inquiries' %}?inst_status=pending" class="btn btn-outline btn-sm btn-corner" data-i18n="btn_filter">View All</a>
+    </div>
+
+    {% if upcoming %}
+      <!-- Desktop Table -->
+      <div class="desktop-table-view">
+        <div class="table-responsive">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_due_date">Due Date</th>
+                <th data-i18n="th_amount">Amount</th>
+                <th data-i18n="th_actions" style="text-align:right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inst in upcoming %}
+                <tr>
+                  <td><strong>{{ inst.customer.name }}</strong></td>
+                  <td>{{ inst.due_date|date:"d M Y" }}</td>
+                  <td style="font-weight:700;">{{ inst.amount|inr }}</td>
+                  <td style="text-align:right;">
+                    <a href="{% url 'collect_installment' inst.loan.pk inst.num %}" class="btn btn-teal btn-sm" onclick="return confirm('Confirm collection of {{ inst.amount|inr }}?')" data-i18n="btn_collect">
+                      Collect
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Mobile Cards for Upcoming -->
+      <div class="mobile-card-view">
+        {% for inst in upcoming %}
+          <div style="background:#ffffff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div>
+              <strong style="color:var(--primary);font-size:0.9rem;">{{ inst.customer.name }}</strong>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+                Due: {{ inst.due_date|date:"d M Y" }} · Inst #{{ inst.num }}
+              </div>
+              <div style="font-weight:800;color:var(--teal);margin-top:2px;">{{ inst.amount|inr }}</div>
+            </div>
+            <div>
+              <a href="{% url 'collect_installment' inst.loan.pk inst.num %}" class="btn btn-teal btn-sm" onclick="return confirm('Confirm collection of {{ inst.amount|inr }}?')" data-i18n="btn_collect">
+                Collect
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.84rem;">No upcoming installments.</div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Payments -->
+  <div class="card">
+    <div class="card-header-row">
+      <h3 class="card-title" data-i18n="sec_recent_collections">Recent Collections</h3>
+      <a href="{% url 'reports' %}?type=collection" class="btn btn-outline btn-sm btn-corner" data-i18n="btn_full_report">Full Report</a>
+    </div>
+
+    {% if recent_paid %}
+      <!-- Desktop Table -->
+      <div class="desktop-table-view">
+        <div class="table-responsive">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th data-i18n="th_customer">Customer</th>
+                <th data-i18n="th_paid_date">Date</th>
+                <th>#</th>
+                <th data-i18n="th_amount">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inst in recent_paid %}
+                <tr>
+                  <td><strong>{{ inst.customer.name }}</strong></td>
+                  <td>{{ inst.paid_date|date:"d M Y" }}</td>
+                  <td>#{{ inst.num }}</td>
+                  <td style="color:var(--teal);font-weight:700;">{{ inst.paid_amount|inr }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Mobile Cards for Recent -->
+      <div class="mobile-card-view">
+        {% for inst in recent_paid %}
+          <div style="background:#ffffff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div>
+              <strong style="color:var(--primary);font-size:0.88rem;">{{ inst.customer.name }}</strong>
+              <div style="font-size:0.75rem;color:var(--text-muted);">{{ inst.paid_date|date:"d M Y" }} · Inst #{{ inst.num }}</div>
+            </div>
+            <div style="color:var(--teal);font-weight:800;font-size:0.9rem;">
+              {{ inst.paid_amount|inr }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.84rem;">No recent collections yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const ctxCol = document.getElementById('collectionChart').getContext('2d');
+  new Chart(ctxCol, {
+    type: 'bar',
+    data: {
+      labels: {{ chart_months|safe }},
+      datasets: [
+        {
+          label: 'Collected',
+          data: {{ chart_collected|safe }},
+          backgroundColor: '#0e7c6b',
+          borderRadius: 6,
+        },
+        {
+          label: 'Due',
+          data: {{ chart_due|safe }},
+          backgroundColor: '#cbd5e1',
+          borderRadius: 6,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  const ctxStatus = document.getElementById('statusChart').getContext('2d');
+  new Chart(ctxStatus, {
+    type: 'doughnut',
+    data: {
+      labels: ['Active', 'Completed', 'Defaulted'],
+      datasets: [{
+        data: [{{ active_count_chart }}, {{ completed_count_chart }}, {{ defaulted_count_chart }}],
+        backgroundColor: ['#f59e0b', '#10b981', '#ef4444'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      cutout: '70%'
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Easy 66 & Co</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #093b32 0%, #0d233a 100%);
+      padding: 16px;
+    }
+    .login-container {
+      background: #ffffff;
+      border-radius: var(--radius-xl);
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <img src="{% static 'assets/logo.jpg' %}" alt="66 Logo" style="width:68px;height:68px;border-radius:50%;margin-bottom:10px;object-fit:cover;">
+    <h1 style="font-size:1.35rem;font-weight:800;color:var(--primary);margin-bottom:2px;">Easy 66 & Co</h1>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:18px;">Thavanai Loan & Installment Tracking</p>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-error" style="margin-bottom:12px;">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="POST" style="display:flex;flex-direction:column;gap:12px;text-align:left;">
+      {% csrf_token %}
+      <div class="form-group">
+        <label>Login As</label>
+        <select name="role" id="loginRole" class="form-control" required>
+          <option value="admin">Admin</option>
+          <option value="employee">Employee</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" id="loginUsername" class="form-control" placeholder="Enter username" required>
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" id="loginPassword" class="form-control" placeholder="Enter password" required>
+      </div>
+
+      <button type="submit" class="btn btn-teal" style="width:100%;justify-content:center;margin-top:6px;padding:10px;">
+        <span class="material-symbols-outlined">login</span> Sign In
+      </button>
+    </form>
+
+    <!-- Quick Autofill for convenience -->
+    <div style="margin-top:14px;display:flex;gap:6px;justify-content:center;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="quickFill('admin', 'admin', 'admin123')">
+        Fill Admin
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="quickFill('employee', 'staff1', 'staff123')">
+        Fill Employee
+      </button>
+    </div>
+
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border-light);font-size:0.75rem;color:var(--text-muted);">
+      Admin: <strong>admin / admin123</strong> · Employee: <strong>staff1 / staff123</strong>
+    </div>
+  </div>
+
+  <script>
+    function quickFill(role, username, password) {
+      document.getElementById('loginRole').value = role;
+      document.getElementById('loginUsername').value = username;
+      document.getElementById('loginPassword').value = password;
+    }
+  </script>
+</body>
+</html>
