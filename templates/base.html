@@ -5,13 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Easy 66 & Co{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261126_2">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   {% block extra_head %}{% endblock %}
 </head>
 <body>
   <div class="app-container">
+    <!-- Mobile Sidebar Overlay (blocks clicks on page behind sidebar & closes menu on tap) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="brand-header">
@@ -100,7 +102,7 @@
     <div class="main-wrapper">
       <header class="top-header">
         <div class="header-left-wrap">
-          <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')" aria-label="Toggle menu">
+          <button type="button" class="mobile-toggle" onclick="toggleMobileSidebar()" aria-label="Toggle menu">
             <span class="material-symbols-outlined">menu</span>
           </button>
           <h2>{% block page_title %}{% endblock %}</h2>
@@ -142,7 +144,46 @@
     </div>
   </div>
 
-  <script src="{% static 'js/lang.js' %}"></script>
+  <script src="{% static 'js/lang.js' %}?v=20261126_3"></script>
+  <script>
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!sidebar) return;
+      const isOpen = sidebar.classList.toggle('open');
+      if (overlay) overlay.classList.toggle('open', isOpen);
+      document.body.classList.toggle('sidebar-is-open', isOpen);
+      if (isOpen && document.activeElement) {
+        document.activeElement.blur();
+      }
+    }
+
+    function closeMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar) sidebar.classList.remove('open');
+      if (overlay) overlay.classList.remove('open');
+      document.body.classList.remove('sidebar-is-open');
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeMobileSidebar();
+    });
+
+    document.querySelectorAll('#sidebar .nav-link').forEach(function (link) {
+      link.addEventListener('click', closeMobileSidebar);
+    });
+
+    // Click anywhere on mobile cards with data-card-href to open detail page
+    document.addEventListener('click', function (e) {
+      const card = e.target.closest('[data-card-href]');
+      if (!card) return;
+      if (e.target.closest('a, button, input, select, textarea, form, label')) return;
+      if (document.body.classList.contains('pdf-select-active')) return;
+      const href = card.getAttribute('data-card-href');
+      if (href) window.location.href = href;
+    });
+  </script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

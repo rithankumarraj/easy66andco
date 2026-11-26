@@ -15,9 +15,9 @@
         </a>
       </h2>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end;width:100%;">
       {% if loan.status != 'completed' %}
-      <a href="{% url 'settle_full_loan' loan.pk %}" class="btn btn-primary btn-sm btn-corner"
+      <a href="{% url 'settle_full_loan' loan.pk %}" class="btn btn-primary btn-sm"
         onclick="return confirm('Settle all remaining {{ loan.pending_count }} installments ({{ outstanding|inr }}) in full for {{ loan.customer.name }}?')">
         <span class="material-symbols-outlined" style="font-size:16px;">done_all</span>
         <span data-i18n="btn_settle_all">Settle Full Balance</span>
@@ -36,7 +36,7 @@
   </div>
 
   <!-- Thavanai Stats -->
-  <div class="stats-grid" style="margin-bottom:12px;">
+  <div class="stats-grid stats-grid-2x2" style="margin-bottom:12px;">
     <div class="stat-box">
       <span class="stat-lbl" data-i18n="lbl_gross_principal">Gross Principal</span>
       <div class="stat-val">{{ loan.gross_principal|inr }}</div>
@@ -199,7 +199,7 @@
         </thead>
         <tbody>
           {% for inst in installments %}
-          <tr>
+          <tr data-inst-num="{{ inst.num }}">
             <td><strong>#{{ inst.num }}</strong></td>
             <td>{{ inst.due_date|date:"d M Y" }}</td>
             <td style="font-weight:700;">{{ inst.amount|inr }}</td>
@@ -241,7 +241,7 @@
   <!-- 2. Mobile Installment Cards View -->
   <div class="mobile-card-view">
     {% for inst in installments %}
-    <div
+    <div data-inst-num="{{ inst.num }}"
       style="background:#ffffff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <div>
         <div style="display:flex;align-items:center;gap:6px;">
@@ -270,4 +270,23 @@
     {% endfor %}
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const m = window.location.hash.match(/^#inst-(\d+)$/);
+    if (!m) return;
+    const targets = document.querySelectorAll('[data-inst-num="' + m[1] + '"]');
+    for (const el of targets) {
+      if (el.offsetParent !== null) {
+        el.style.backgroundColor = '#ecfdf5';
+        el.style.border = '2px solid #059669';
+        el.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.15)';
+        setTimeout(function () {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 120);
+        break;
+      }
+    }
+  });
+</script>
 {% endblock %}

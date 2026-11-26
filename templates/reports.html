@@ -44,12 +44,12 @@
       </select>
     </div>
 
-    <div class="form-group">
+    <div class="form-group filter-date-col">
       <label data-i18n="lbl_from_date">From Date</label>
       <input type="date" name="from" value="{{ from_date }}" class="form-control">
     </div>
 
-    <div class="form-group">
+    <div class="form-group filter-date-col">
       <label data-i18n="lbl_to_date">To Date</label>
       <input type="date" name="to" value="{{ to_date }}" class="form-control">
     </div>
@@ -323,7 +323,7 @@
     <div class="mobile-card-view">
       {% if report_type == 'summary' or report_type == 'customer' %}
         {% for loan in report_data %}
-          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+          <div class="mobile-customer-card" data-card-href="{% url 'loan_detail' loan.pk %}" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <div>
                 <a href="{% url 'loan_detail' loan.pk %}" style="font-weight:800;color:var(--primary);text-decoration:none;font-size:15px;">{{ loan.customer.name }}</a>
@@ -350,7 +350,7 @@
 
       {% elif report_type == 'collection' %}
         {% for inst in report_data %}
-          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+          <div class="mobile-customer-card" data-card-href="{% url 'loan_detail' inst.loan.pk %}#inst-{{ inst.num }}" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <div>
                 <a href="{% url 'customer_detail' inst.loan.customer.pk %}" style="font-weight:800;color:var(--primary);text-decoration:none;font-size:14.5px;">{{ inst.loan.customer.name }}</a>
@@ -380,7 +380,7 @@
 
       {% elif report_type == 'outstanding' %}
         {% for loan in report_data %}
-          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+          <div class="mobile-customer-card" data-card-href="{% url 'loan_detail' loan.pk %}" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <div>
                 <a href="{% url 'loan_detail' loan.pk %}" style="font-weight:800;color:var(--primary);text-decoration:none;font-size:14.5px;">{{ loan.customer.name }}</a>
@@ -405,7 +405,7 @@
 
       {% elif report_type == 'overdue' %}
         {% for inst in report_data %}
-          <div class="mobile-customer-card" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
+          <div class="mobile-customer-card" data-card-href="{% url 'loan_detail' inst.loan.pk %}#inst-{{ inst.num }}" style="background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <div>
                 <strong style="color:var(--primary);font-size:14.5px;">{{ inst.loan.customer.name }}</strong>

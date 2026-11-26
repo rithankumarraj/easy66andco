@@ -16,8 +16,8 @@
     </span>
   </div>
 
-  <!-- Cashfree Dashboard Guide Banner -->
-  <div style="background:#f0fdf9;border:1.5px solid #a7f3d0;border-radius:var(--radius-md);padding:14px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start;">
+  <!-- Cashfree Dashboard Guide Banner (Desktop only) -->
+  <div class="desktop-only-desc" style="background:#f0fdf9;border:1.5px solid #a7f3d0;border-radius:var(--radius-md);padding:14px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start;">
     <span class="material-symbols-outlined" style="color:var(--teal);font-size:26px;flex-shrink:0;">info</span>
     <div style="font-size:0.84rem;color:var(--text-main);line-height:1.5;">
       <strong>How to get your Cashfree Test Credentials:</strong>
@@ -63,14 +63,14 @@
     </div>
 
     <div class="form-group">
-      <label>Cashfree Webhook Endpoint (For Instant Auto-Update)</label>
+      <label>Cashfree Webhook Endpoint <span class="desktop-only-desc">(For Instant Auto-Update)</span></label>
       <div style="display:flex;gap:6px;">
-        <input type="text" value="{{ webhook_url }}" class="form-control" readonly style="background:#f8fafc;font-family:monospace;font-size:0.8rem;" id="webhookUrlInput">
-        <button type="button" class="btn btn-outline btn-sm" onclick="copyWebhookUrl()">
+        <input type="text" value="{{ webhook_url }}" class="form-control" readonly style="background:#f8fafc;font-family:monospace;font-size:0.8rem;min-width:0;flex:1;" id="webhookUrlInput">
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyWebhookUrl()" style="flex-shrink:0;">
           <span class="material-symbols-outlined" style="font-size:16px;">content_copy</span> Copy
         </button>
       </div>
-      <small style="color:var(--text-muted);font-size:0.75rem;">
+      <small class="desktop-only-desc" style="color:var(--text-muted);font-size:0.75rem;">
         Paste this URL in your <strong>Cashfree Dashboard ➔ Developers ➔ Webhooks</strong> to receive automatic payment callbacks.
       </small>
     </div>
@@ -79,21 +79,21 @@
       <label>Automatic Daily Auto-Debit</label>
       <div style="display:flex;align-items:center;gap:8px;">
         <input type="checkbox" name="auto_debit" id="auto_debit" {% if config.auto_debit %}checked{% endif %} style="width:18px;height:18px;accent-color:var(--teal);">
-        <label for="auto_debit" style="margin:0;font-size:0.85rem;cursor:pointer;">Automatically collect installments when due date arrives</label>
+        <label for="auto_debit" style="margin:0;font-size:0.85rem;cursor:pointer;">Auto-collect on due date</label>
       </div>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-light);padding-top:14px;margin-top:6px;">
-      <button type="submit" name="test_conn" value="1" class="btn btn-outline" style="color:var(--primary);border-color:var(--primary);">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border-light);padding-top:14px;margin-top:6px;">
+      <button type="submit" name="test_conn" value="1" class="btn btn-outline btn-sm" style="color:var(--primary);border-color:var(--primary);margin-left:auto;">
         <span class="material-symbols-outlined" style="font-size:16px;">cable</span>
-        Test Cashfree API Connection
+        Test Connection
       </button>
 
-      <div style="display:flex;gap:8px;">
-        <a href="{% url 'dashboard' %}" class="btn btn-outline" data-i18n="btn_cancel">Cancel</a>
-        <button type="submit" class="btn btn-teal">
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm" data-i18n="btn_cancel">Cancel</a>
+        <button type="submit" class="btn btn-teal btn-sm">
           <span class="material-symbols-outlined" style="font-size:16px;">save</span>
-          Save Cashfree Settings
+          Save Settings
         </button>
       </div>
     </div>

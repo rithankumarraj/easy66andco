@@ -438,6 +438,10 @@ body{
   gap:8px;
 }
 
+[data-card-href]{
+  cursor:pointer;
+}
+
 .m-card-header{
   display:flex;
   align-items:center;
@@ -589,6 +593,10 @@ body{
 
 .btn-sm{padding:4px 9px;font-size:0.75rem}
 
+.btn-sm .material-symbols-outlined{
+  font-size:16px !important;
+}
+
 .preset-chip{
   padding:4px 11px;
   font-size:0.75rem;
@@ -719,6 +727,10 @@ body{
   color:var(--primary);
 }
 
+.sidebar-overlay{
+  display:none;
+}
+
 /* ========================================================
    RESPONSIVE / MOBILE VIEW SPECIFIC ENHANCEMENTS
    ======================================================== */
@@ -742,10 +754,27 @@ body{
     height:100vh;
     border-radius:0;
     box-shadow:0 0 25px rgba(0,0,0,0.35);
-    z-index:999;
+    z-index:9999;
   }
   .sidebar.open{
     transform:translateX(270px);
+  }
+
+  .sidebar-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15, 23, 42, 0.35);
+    z-index:9998;
+  }
+
+  .sidebar-overlay.open{
+    display:block;
+  }
+
+  body.sidebar-is-open .main-wrapper{
+    pointer-events:none !important;
+    user-select:none !important;
   }
 
   .mobile-toggle{
@@ -802,7 +831,8 @@ body{
     align-items:center;
   }
 
-  .card-subtitle{
+  .card-subtitle,
+  .desktop-only-desc{
     display:none !important;
   }
 
@@ -825,11 +855,38 @@ body{
   }
 
   .filter-bar{
-    gap:6px;
+    gap:8px;
   }
 
   .filter-bar .form-group{
+    flex:1 1 100%;
     min-width:100% !important;
+  }
+
+  /* Keep From Date and To Date side-by-side in a single row on mobile */
+  .filter-bar .form-group.filter-date-col{
+    flex:1 1 calc(50% - 4px) !important;
+    min-width:0 !important;
+    max-width:calc(50% - 4px) !important;
+  }
+
+  /* Keep Search bar + Search button, and Staff select + Filter button in the same row */
+  .filter-bar .form-group.filter-inline-grow{
+    flex:1 1 0% !important;
+    min-width:0 !important;
+  }
+
+  .filter-inline-row{
+    display:flex !important;
+    gap:8px !important;
+    align-items:flex-end !important;
+    width:100% !important;
+  }
+
+  /* Right-hand thumb access for filter/search buttons on mobile */
+  .filter-bar > button[type="submit"],
+  .filter-bar > .filter-actions-right{
+    margin-left:auto !important;
   }
 
   .form-grid{

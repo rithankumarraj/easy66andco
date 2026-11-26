@@ -56,16 +56,16 @@
 <div class="card">
   <div class="card-header-row" style="flex-wrap:wrap;gap:12px;">
     <div>
-      <h3 class="card-title">Borrower Loan Applications & Uploaded KYC</h3>
-      <div class="card-subtitle">Review incoming online requests, view uploaded PAN, Aadhaar & Utility Bills, and issue loans.</div>
+      <h3 class="card-title" data-i18n="req_page_title">Borrower Loan Applications & Uploaded KYC</h3>
+      <div class="card-subtitle" data-i18n="req_page_sub">Review incoming online requests, view uploaded PAN, Aadhaar & Utility Bills, and issue loans.</div>
     </div>
     
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a href="{% url 'whatsapp_messenger' %}" class="btn btn-teal btn-sm">
-        <span class="material-symbols-outlined">chat</span> Send Application Link via WhatsApp
+        <span class="material-symbols-outlined">chat</span> <span data-i18n="btn_send_wa_link">Send Application Link via WhatsApp</span>
       </a>
       <a href="{% url 'loan_request_public' %}" target="_blank" class="btn btn-outline btn-sm">
-        <span class="material-symbols-outlined">open_in_new</span> Open Public Application Form
+        <span class="material-symbols-outlined">open_in_new</span> <span data-i18n="btn_open_public_form">Open Public Application Form</span>
       </a>
     </div>
   </div>
@@ -73,30 +73,34 @@
   <!-- Status Tabs -->
   <div style="display:flex;gap:8px;margin-top:14px;border-bottom:1px solid var(--border);padding-bottom:12px;overflow-x:auto;">
     <a href="{% url 'loan_request_list' %}" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline{% endif %}">
-      All ({{ counts.all }})
+      <span data-i18n="lbl_all">All</span> ({{ counts.all }})
     </a>
     <a href="{% url 'loan_request_list' %}?status=pending" class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline{% endif %}">
-      Pending ({{ counts.pending }})
+      <span data-i18n="lbl_pending">Pending</span> ({{ counts.pending }})
     </a>
     <a href="{% url 'loan_request_list' %}?status=approved" class="btn btn-sm {% if status_filter == 'approved' %}btn-primary{% else %}btn-outline{% endif %}">
-      Approved ({{ counts.approved }})
+      <span data-i18n="lbl_approved">Approved</span> ({{ counts.approved }})
     </a>
     <a href="{% url 'loan_request_list' %}?status=rejected" class="btn btn-sm {% if status_filter == 'rejected' %}btn-primary{% else %}btn-outline{% endif %}">
-      Rejected ({{ counts.rejected }})
+      <span data-i18n="lbl_rejected">Rejected</span> ({{ counts.rejected }})
     </a>
   </div>
 
   <form method="GET" class="filter-bar" style="margin-top:14px;">
     {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
-    <div class="form-group" style="flex:1;min-width:240px;">
-      <input type="text" name="q" value="{{ q }}" placeholder="Search applicant name, phone, or Request ID..." class="form-control">
+    <div class="filter-inline-row" style="display:flex;gap:8px;align-items:center;width:100%;">
+      <div class="form-group filter-inline-grow" style="flex:1;min-width:0;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search applicant name, phone, or Request ID..." data-i18n-ph="ph_search_req" class="form-control">
+      </div>
+      <div class="filter-actions-right" style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+        <button type="submit" class="btn btn-teal btn-sm" style="height:38px;">
+          <span class="material-symbols-outlined">search</span> <span data-i18n="btn_search">Search</span>
+        </button>
+        {% if q or status_filter %}
+          <a href="{% url 'loan_request_list' %}" class="btn btn-outline btn-sm" style="height:38px;line-height:38px;padding:0 14px;" data-i18n="btn_clear">Clear</a>
+        {% endif %}
+      </div>
     </div>
-    <button type="submit" class="btn btn-teal btn-sm" style="height:38px;">
-      <span class="material-symbols-outlined">search</span> Search
-    </button>
-    {% if q or status_filter %}
-      <a href="{% url 'loan_request_list' %}" class="btn btn-outline btn-sm" style="height:38px;line-height:38px;padding:0 14px;">Clear</a>
-    {% endif %}
   </form>
 </div>
 
@@ -107,15 +111,15 @@
       <table class="modern-table">
         <thead>
           <tr>
-            <th>Req ID</th>
-            <th>Applicant</th>
-            <th>Phone</th>
-            <th>Requested Amount</th>
-            <th>Freq</th>
-            <th>Employment</th>
-            <th>Uploaded Documents (Click to View)</th>
-            <th>Status</th>
-            <th style="text-align:right;">Actions</th>
+            <th data-i18n="th_req_id">Req ID</th>
+            <th data-i18n="th_applicant">Applicant</th>
+            <th data-i18n="th_phone">Phone</th>
+            <th data-i18n="th_req_amount">Requested Amount</th>
+            <th data-i18n="th_freq_short">Freq</th>
+            <th data-i18n="th_employment">Employment</th>
+            <th data-i18n="th_uploaded_docs">Uploaded Documents (Click to View)</th>
+            <th data-i18n="th_status">Status</th>
+            <th style="text-align:right;" data-i18n="th_actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -150,49 +154,49 @@
                 <div style="display:flex;flex-wrap:wrap;gap:6px;max-width:280px;">
                   {% if req.pan_card_doc %}
                     <a href="{{ req.pan_card_doc.url }}" target="_blank" class="doc-pill doc-pan" title="Click to view PAN Card">
-                      <span class="material-symbols-outlined" style="font-size:14px;">description</span> PAN Card
+                      <span class="material-symbols-outlined" style="font-size:14px;">description</span> <span data-i18n="doc_pan">PAN Card</span>
                     </a>
                   {% else %}
-                    <span class="doc-pill doc-missing">No PAN</span>
+                    <span class="doc-pill doc-missing" data-i18n="doc_no_pan">No PAN</span>
                   {% endif %}
 
                   {% if req.aadhaar_card_doc %}
                     <a href="{{ req.aadhaar_card_doc.url }}" target="_blank" class="doc-pill doc-aadhaar" title="Click to view Aadhaar Card">
-                      <span class="material-symbols-outlined" style="font-size:14px;">fingerprint</span> Aadhaar
+                      <span class="material-symbols-outlined" style="font-size:14px;">fingerprint</span> <span data-i18n="doc_aadhaar">Aadhaar</span>
                     </a>
                   {% else %}
-                    <span class="doc-pill doc-missing">No Aadhaar</span>
+                    <span class="doc-pill doc-missing" data-i18n="doc_no_aadhaar">No Aadhaar</span>
                   {% endif %}
 
                   {% if req.utility_bill_doc %}
                     <a href="{{ req.utility_bill_doc.url }}" target="_blank" class="doc-pill doc-utility" title="Click to view Recent Utility Bill">
-                      <span class="material-symbols-outlined" style="font-size:14px;">receipt_long</span> Utility Bill
+                      <span class="material-symbols-outlined" style="font-size:14px;">receipt_long</span> <span data-i18n="doc_utility">Utility Bill</span>
                     </a>
                   {% else %}
-                    <span class="doc-pill doc-missing">No Utility Bill</span>
+                    <span class="doc-pill doc-missing" data-i18n="doc_no_utility">No Utility Bill</span>
                   {% endif %}
                 </div>
               </td>
               <td>
                 {% if req.status == 'approved' %}
-                  <span class="badge badge-active">Approved</span>
+                  <span class="badge badge-active" data-i18n="lbl_approved">Approved</span>
                 {% elif req.status == 'rejected' %}
-                  <span class="badge badge-danger">Rejected</span>
+                  <span class="badge badge-danger" data-i18n="lbl_rejected">Rejected</span>
                 {% else %}
-                  <span class="badge badge-warning">Pending</span>
+                  <span class="badge badge-warning" data-i18n="lbl_pending">Pending</span>
                 {% endif %}
               </td>
               <td style="text-align:right;">
                 <div style="display:inline-flex;gap:6px;align-items:center;">
                   <a href="{% url 'loan_request_convert' req.pk %}" class="btn btn-teal btn-sm" title="Convert to Customer & Issue Loan">
-                    <span class="material-symbols-outlined" style="font-size:15px;">check_circle</span> Issue Loan
+                    <span class="material-symbols-outlined" style="font-size:15px;">check_circle</span> <span data-i18n="btn_issue_loan">Issue Loan</span>
                   </a>
 
                   {% if req.status == 'pending' %}
                     <form method="POST" action="{% url 'loan_request_status_update' req.pk %}" style="display:inline;">
                       {% csrf_token %}
                       <input type="hidden" name="status" value="rejected">
-                      <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" title="Reject Request">
+                      <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger);" title="Reject Request" data-i18n="btn_reject">
                         Reject
                       </button>
                     </form>
@@ -237,11 +241,11 @@
         </div>
         <div>
           {% if req.status == 'approved' %}
-            <span class="badge badge-active" style="font-size:11px;">Approved</span>
+            <span class="badge badge-active" style="font-size:11px;" data-i18n="lbl_approved">Approved</span>
           {% elif req.status == 'rejected' %}
-            <span class="badge badge-danger" style="font-size:11px;">Rejected</span>
+            <span class="badge badge-danger" style="font-size:11px;" data-i18n="lbl_rejected">Rejected</span>
           {% else %}
-            <span class="badge badge-warning" style="font-size:11px;">Pending</span>
+            <span class="badge badge-warning" style="font-size:11px;" data-i18n="lbl_pending">Pending</span>
           {% endif %}
         </div>
       </div>
@@ -288,32 +292,32 @@
 
       <!-- Uploaded Documents Pills -->
       <div>
-        <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.3px;">
+        <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.3px;" data-i18n="th_uploaded_docs">
           Uploaded Documents (Tap to View):
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
           {% if req.pan_card_doc %}
             <a href="{{ req.pan_card_doc.url }}" target="_blank" class="doc-pill doc-pan">
-              <span class="material-symbols-outlined" style="font-size:13px;">description</span> PAN Card
+              <span class="material-symbols-outlined" style="font-size:13px;">description</span> <span data-i18n="doc_pan">PAN Card</span>
             </a>
           {% else %}
-            <span class="doc-pill doc-missing">No PAN</span>
+            <span class="doc-pill doc-missing" data-i18n="doc_no_pan">No PAN</span>
           {% endif %}
 
           {% if req.aadhaar_card_doc %}
             <a href="{{ req.aadhaar_card_doc.url }}" target="_blank" class="doc-pill doc-aadhaar">
-              <span class="material-symbols-outlined" style="font-size:13px;">fingerprint</span> Aadhaar
+              <span class="material-symbols-outlined" style="font-size:13px;">fingerprint</span> <span data-i18n="doc_aadhaar">Aadhaar</span>
             </a>
           {% else %}
-            <span class="doc-pill doc-missing">No Aadhaar</span>
+            <span class="doc-pill doc-missing" data-i18n="doc_no_aadhaar">No Aadhaar</span>
           {% endif %}
 
           {% if req.utility_bill_doc %}
             <a href="{{ req.utility_bill_doc.url }}" target="_blank" class="doc-pill doc-utility">
-              <span class="material-symbols-outlined" style="font-size:13px;">receipt_long</span> Utility Bill
+              <span class="material-symbols-outlined" style="font-size:13px;">receipt_long</span> <span data-i18n="doc_utility">Utility Bill</span>
             </a>
           {% else %}
-            <span class="doc-pill doc-missing">No Utility Bill</span>
+            <span class="doc-pill doc-missing" data-i18n="doc_no_utility">No Utility Bill</span>
           {% endif %}
         </div>
       </div>
@@ -321,13 +325,13 @@
       <!-- Actions Row: Issue Loan / Reject -->
       <div style="display:flex;gap:8px;margin-top:2px;padding-top:4px;">
         <a href="{% url 'loan_request_convert' req.pk %}" class="btn btn-teal btn-sm" style="flex:1;justify-content:center;height:38px;font-weight:700;text-decoration:none;">
-          <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> Issue Loan
+          <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> <span data-i18n="btn_issue_loan">Issue Loan</span>
         </a>
         {% if req.status == 'pending' %}
           <form method="POST" action="{% url 'loan_request_status_update' req.pk %}" style="display:inline;">
             {% csrf_token %}
             <input type="hidden" name="status" value="rejected">
-            <button type="submit" class="btn btn-outline btn-sm" style="height:38px;color:var(--danger);border-color:var(--danger);padding:0 14px;" title="Reject Request">
+            <button type="submit" class="btn btn-outline btn-sm" style="height:38px;color:var(--danger);border-color:var(--danger);padding:0 14px;" title="Reject Request" data-i18n="btn_reject">
               Reject
             </button>
           </form>

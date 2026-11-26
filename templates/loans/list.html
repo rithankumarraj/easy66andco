@@ -21,11 +21,16 @@
 
   <!-- Search & Filter Bar -->
   <form method="GET" class="filter-bar">
-    <div class="form-group" style="flex:1;min-width:180px;">
-      <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, loan ID..."
-        data-i18n-ph="ph_search_global" class="form-control">
+    <div class="filter-inline-row" style="display:flex;gap:8px;align-items:center;flex:1;min-width:220px;">
+      <div class="form-group filter-inline-grow" style="flex:1;min-width:0;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search customer, phone, loan ID..."
+          data-i18n-ph="ph_search_global" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-teal btn-sm" style="height:36px;flex-shrink:0;">
+        <span class="material-symbols-outlined">search</span> <span data-i18n="btn_search">Search</span>
+      </button>
     </div>
-    <div class="form-group" style="min-width:120px;">
+    <div class="form-group filter-date-col" style="min-width:120px;">
       <select name="freq" class="form-control" onchange="this.form.submit()">
         <option value="">All Frequencies</option>
         <option value="daily" {% if freq == 'daily' %}selected{% endif %}>Daily</option>
@@ -33,7 +38,7 @@
         <option value="monthly" {% if freq == 'monthly' %}selected{% endif %}>Monthly</option>
       </select>
     </div>
-    <div class="form-group" style="min-width:120px;">
+    <div class="form-group filter-date-col" style="min-width:120px;">
       <select name="status" class="form-control" onchange="this.form.submit()">
         <option value="">All Statuses</option>
         <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
@@ -41,9 +46,8 @@
         <option value="defaulted" {% if status_filter == 'defaulted' %}selected{% endif %}>Defaulted</option>
       </select>
     </div>
-    <button type="submit" class="btn btn-primary btn-sm" data-i18n="btn_filter">Filter</button>
     {% if q or freq or status_filter %}
-    <a href="{% url 'loan_list' %}" class="btn btn-outline btn-sm">Reset</a>
+    <a href="{% url 'loan_list' %}" class="btn btn-outline btn-sm" style="margin-left:auto;" data-i18n="btn_reset">Reset</a>
     {% endif %}
   </form>
 
@@ -113,7 +117,7 @@
   <!-- 2. Mobile Card View -->
   <div class="mobile-card-view">
     {% for l in loans %}
-    <div class="mobile-customer-card">
+    <div class="mobile-customer-card" data-card-href="{% url 'loan_detail' l.pk %}">
       <div class="m-card-header">
         <div class="m-cust-name-id">
           <span class="m-cust-id">{{ l.loan_id }}</span>
@@ -145,8 +149,7 @@
         </div>
 
         <div class="m-inst-progress">
-          <span>Installments: <strong>{{ l.paid_count }}</strong> / {{ l.installment_count }} ({{
-            l.installment_amount|inr }})</span>
+          <span>Installments: <strong>{{ l.paid_count }}</strong> / {{ l.installment_count }} ({{ l.installment_amount|inr }})</span>
           {% if l.overdue_count > 0 %}
           <span style="color:var(--danger);font-weight:700;">{{ l.overdue_count }} late</span>
           {% endif %}

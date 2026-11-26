@@ -28,6 +28,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Sum, Q, Count
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import UserProfile, Customer, Loan, Installment, CashfreeConfig, WhatsAppConfig, LoanRequest
@@ -117,7 +118,7 @@ def dashboard(request):
 
     recent_paid = all_inst.filter(
         status='paid'
-    ).select_related('loan', 'loan__customer', 'collected_by').order_by('-paid_date')[:10]
+    ).select_related('loan', 'loan__customer', 'collected_by').order_by('-paid_date', '-paid_at', '-id')[:10]
 
     # Monthly collection chart (last 6 months)
     chart_months, chart_collected, chart_due = [], [], []
@@ -488,10 +489,10 @@ def collection_list(request):
             Q(loan__loan_id__icontains=q)
         )
 
-    # 2. History / Paid Collections
+    # 2. History / Paid Collections (Most recently paid first, oldest paid last)
     all_paid_inst = Installment.objects.filter(loan__in=loans, status='paid').select_related(
         'loan', 'loan__customer', 'collected_by'
-    ).order_by('-paid_date', '-id')
+    ).order_by('-paid_date', '-paid_at', '-id')
 
     today_total = all_paid_inst.filter(paid_date=today_date).aggregate(t=Sum('paid_amount'))['t'] or 0
     today_count = all_paid_inst.filter(paid_date=today_date).count()
@@ -529,6 +530,8 @@ def collection_list(request):
             Q(loan__loan_id__icontains=q)
         )
 
+    history_list = history_list.order_by('-paid_date', '-paid_at', '-id')
+
     filtered_total = history_list.aggregate(t=Sum('paid_amount'))['t'] or 0
     staff_list = User.objects.filter(profile__role='employee') if request.user.profile.role == 'admin' else []
 
@@ -562,6 +565,7 @@ def collect_installment(request, loan_pk, inst_num):
     if inst.status != 'paid':
         inst.status = 'paid'
         inst.paid_date = date.today()
+        inst.paid_at = timezone.now()
         inst.paid_amount = inst.amount
         inst.collected_by = request.user
         inst.save()
@@ -591,6 +595,7 @@ def settle_full_loan(request, pk):
     for inst in unpaid:
         inst.status = 'paid'
         inst.paid_date = today_date
+        inst.paid_at = timezone.now()
         inst.paid_amount = inst.amount
         inst.collected_by = request.user
         inst.save()
@@ -1107,7 +1112,7 @@ def reports(request):
             qs = qs.filter(paid_date__gte=from_date)
         if to_date:
             qs = qs.filter(paid_date__lte=to_date)
-        report_data = qs.select_related('loan', 'loan__customer', 'collected_by').order_by('-paid_date', '-id')
+        report_data = qs.select_related('loan', 'loan__customer', 'collected_by').order_by('-paid_date', '-paid_at', '-id')
         summary['total_collected'] = qs.aggregate(t=Sum('paid_amount'))['t'] or 0
         summary['count'] = qs.count()
 
@@ -1185,7 +1190,7 @@ def report_pdf(request):
                          l.frequency.capitalize(), l.status.title()])
 
     elif report_type == 'collection':
-        qs = all_inst.filter(status='paid').select_related('loan', 'loan__customer', 'collected_by').order_by('-paid_date', '-id')
+        qs = all_inst.filter(status='paid').select_related('loan', 'loan__customer', 'collected_by').order_by('-paid_date', '-paid_at', '-id')
         if selected_ids:
             qs = qs.filter(id__in=selected_ids)
             title = f'Collection Report ({qs.count()} Selected Records)'

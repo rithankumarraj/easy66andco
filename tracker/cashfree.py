@@ -13,6 +13,7 @@ import logging
 import requests
 from datetime import date
 from django.conf import settings
+from django.utils import timezone
 from .models import CashfreeConfig, Loan, Installment
 
 logger = logging.getLogger(__name__)
@@ -195,6 +196,7 @@ def process_subscription_payment(subscription_id, amount=None, reference_id=''):
 
     inst.status = 'paid'
     inst.paid_date = date.today()
+    inst.paid_at = timezone.now()
     inst.paid_amount = amount or inst.amount
     inst.payment_method = 'cashfree_auto'
     inst.cashfree_reference_id = reference_id or f"cf_pay_{int(time.time())}"
